@@ -16,9 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <header className="bg-gray-900 text-white shadow-lg absolute top-0 left-0 right-0 z-50">
-          <nav className="container mx-auto px-4 py-4">
-            <div className="flex gap-4">
+        
+            <div className="flex gap-4 bg-white text-black shadow-lg fixed top-0 left-0 right-0 z-50">
               <Link 
                 href="/" 
                 className="hover:text-blue-300 transition-colors duration-200 font-medium"
@@ -38,8 +37,6 @@ export default function RootLayout({
                 Fractal
               </Link>
             </div>
-          </nav>
-        </header>
         {children}
       </body>
     </html>
