@@ -36,6 +36,48 @@ export default function RootLayout({
               >
                 Fractal
               </Link>
+              <Link 
+                href="/inertia" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Inertia
+              </Link>
+              <Link 
+                href="/geometric" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Geometric
+              </Link>
+              <Link 
+                href="/crystal" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Crystal
+              </Link>
+              <Link 
+                href="/kaleidoscope" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Kaleidoscope
+              </Link>
+              <Link 
+                href="/snow" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Snow
+              </Link>
+              <Link 
+                href="/starwars" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Star Wars
+              </Link>
+              <Link 
+                href="/tunnel" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Tunnel
+              </Link>
             </div>
         {children}
       </body>

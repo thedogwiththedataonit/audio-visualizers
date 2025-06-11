@@ -1,6 +1,5 @@
 "use client"
 
-import type React from "react"
 import { useRef, useEffect, useState, useCallback } from "react"
 
 interface AudioData {
@@ -12,20 +11,7 @@ interface AudioData {
   waveformData: Float32Array
 }
 
-/**
- * Audio-Reactive GLSL Visualization Component
- *
- * An enhanced React component that renders a WebGL visualization based on fractal ray marching
- * with comprehensive audio reactivity and visual controls.
- *
- * Features:
- * - Audio-reactive fractal rendering with frequency analysis
- * - Full audio player with upload, playback controls, and timeline
- * - Real-time visual controls for audio responsiveness
- * - Mouse inertia controls for manual interaction
- * - Support for MP3, WAV, and OGG audio formats
- */
-const TweetGLSLVisualization: React.FC = () => {
+export default function KaleidoscopeGLSLVisualization() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -37,20 +23,14 @@ const TweetGLSLVisualization: React.FC = () => {
   // WebGL uniform locations
   const resolutionUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const timeUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const mouseUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const rotationXUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const rotationYUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const colorShiftUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  
-  // Audio uniform locations
   const audioLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const bassLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const midLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const trebleLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const frequencyDataUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const waveformDataUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  
-  // Audio control uniform locations
+
+  // Control uniform locations
   const intensityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const rotationSpeedUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const colorSensitivityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
@@ -91,8 +71,6 @@ const TweetGLSLVisualization: React.FC = () => {
   const initAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-
-      // Resume context if suspended (browser autoplay policy)
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume()
       }
@@ -111,54 +89,45 @@ const TweetGLSLVisualization: React.FC = () => {
     analyser.getByteFrequencyData(dataArray)
     analyser.getByteTimeDomainData(waveformArray)
 
-    // Calculate frequency bands
     const bassEnd = Math.floor(bufferLength * 0.1)
     const midEnd = Math.floor(bufferLength * 0.5)
 
     let bassSum = 0, midSum = 0, trebleSum = 0, totalSum = 0
 
-    // Bass (0-10% of frequency range)
     for (let i = 0; i < bassEnd; i++) {
       bassSum += dataArray[i]
     }
     bassSum /= bassEnd
 
-    // Mid (10-50% of frequency range)
     for (let i = bassEnd; i < midEnd; i++) {
       midSum += dataArray[i]
     }
     midSum /= (midEnd - bassEnd)
 
-    // Treble (50-100% of frequency range)
     for (let i = midEnd; i < bufferLength; i++) {
       trebleSum += dataArray[i]
     }
     trebleSum /= (bufferLength - midEnd)
 
-    // Overall level
     for (let i = 0; i < bufferLength; i++) {
       totalSum += dataArray[i]
     }
     const level = totalSum / bufferLength / 255
 
-    // Normalize frequency bands
     const bassLevel = bassSum / 255
     const midLevel = midSum / 255
     const trebleLevel = trebleSum / 255
 
-    // Downsample frequency data to 64 bins
     for (let i = 0; i < 64; i++) {
       const index = Math.floor((i / 64) * bufferLength)
       frequencyDataRef.current[i] = dataArray[index] / 255
     }
 
-    // Downsample waveform data to 32 bins
     for (let i = 0; i < 32; i++) {
       const index = Math.floor((i / 32) * bufferLength)
       waveformDataRef.current[i] = (waveformArray[index] - 128) / 128
     }
 
-    // Smooth the audio data to prevent jarring transitions
     const smoothingFactor = smoothing
     const current = smoothedAudioDataRef.current
 
@@ -167,7 +136,6 @@ const TweetGLSLVisualization: React.FC = () => {
     current.midLevel = current.midLevel * smoothingFactor + midLevel * (1 - smoothingFactor)
     current.trebleLevel = current.trebleLevel * smoothingFactor + trebleLevel * (1 - smoothingFactor)
 
-    // Update frequency and waveform arrays
     for (let i = 0; i < 64; i++) {
       current.frequencyData[i] = current.frequencyData[i] * smoothingFactor + frequencyDataRef.current[i] * (1 - smoothingFactor)
     }
@@ -189,7 +157,6 @@ const TweetGLSLVisualization: React.FC = () => {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(file.name.replace(/\.[^/.]+$/, ""))
@@ -203,7 +170,6 @@ const TweetGLSLVisualization: React.FC = () => {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -213,7 +179,6 @@ const TweetGLSLVisualization: React.FC = () => {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -242,7 +207,6 @@ const TweetGLSLVisualization: React.FC = () => {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(filename.replace(/\.[^/.]+$/, ""))
@@ -256,7 +220,6 @@ const TweetGLSLVisualization: React.FC = () => {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -266,7 +229,6 @@ const TweetGLSLVisualization: React.FC = () => {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -297,7 +259,6 @@ const TweetGLSLVisualization: React.FC = () => {
   const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragOver(false)
-
     const file = event.dataTransfer.files[0]
     if (file && file.type.startsWith('audio/')) {
       loadAudioFile(file)
@@ -334,7 +295,6 @@ const TweetGLSLVisualization: React.FC = () => {
 
   const handleSeek = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (!audioElementRef.current) return
-
     const seekTime = (parseFloat(event.target.value) / 100) * duration
     audioElementRef.current.currentTime = seekTime
     setCurrentTime(seekTime)
@@ -343,7 +303,6 @@ const TweetGLSLVisualization: React.FC = () => {
   const handleVolumeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(event.target.value) / 100
     setVolume(newVolume)
-
     if (audioElementRef.current) {
       audioElementRef.current.volume = newVolume
     }
@@ -368,23 +327,17 @@ const TweetGLSLVisualization: React.FC = () => {
     loadAudioFromUrl(url, displayName)
   }, [loadAudioFromUrl])
 
+  // WebGL setup
   useEffect(() => {
-    let program: WebGLProgram | null = null
-    let vertexShader: WebGLShader | null = null
-    let fragmentShader: WebGLShader | null = null
-    let positionBuffer: WebGLBuffer | null = null
-    let gl: WebGL2RenderingContext | null = null
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Get WebGL2 context
-    gl = canvas.getContext("webgl2")
+    const gl = canvas.getContext("webgl2")
     if (!gl) {
       console.error("WebGL2 not supported")
       return
     }
 
-    // Resize canvas to full screen
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
@@ -394,332 +347,277 @@ const TweetGLSLVisualization: React.FC = () => {
     resizeCanvas()
     window.addEventListener("resize", resizeCanvas)
 
-    // Vertex shader source - minimal pass-through shader
     const vertexShaderSource = `#version 300 es
-    precision highp float;
-    
-    in vec4 a_position;
-    
-    void main() {
-      gl_Position = a_position;
-    }
+      precision highp float;
+      in vec4 a_position;
+      void main() {
+        gl_Position = a_position;
+      }
     `
 
-    // Audio-reactive fragment shader source
+    // Enhanced Kaleidoscope fragment shader
     const fragmentShaderSource = `#version 300 es
-precision highp float;
-
-out vec4 outColor;
-uniform vec2 u_resolution;
-uniform float u_time;
-
-// Audio uniforms
-uniform float u_audioLevel;
-uniform float u_bassLevel;
-uniform float u_midLevel;
-uniform float u_trebleLevel;
-uniform float u_frequencyData[64];
-uniform float u_waveformData[32];
-
-// Control uniforms
-uniform float u_intensity;
-uniform float u_rotationSpeed;
-uniform float u_colorSensitivity;
-uniform float u_beatPulse;
-uniform float u_fractalComplexity;
-uniform float u_scaleReactivity;
-
-// 2D rotation matrix function
-mat2 rotate2D(float angle) {
-  float s = sin(angle);
-  float c = cos(angle);
-  return mat2(c, -s, s, c);
-}
-
-// HSV to RGB color conversion
-vec3 hsv(float h, float s, float v) {
-  vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-  vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
-  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
-}
-
-// Get frequency data for a normalized position (0-1)
-float getFrequency(float pos) {
-  int index = int(pos * 63.0);
-  return u_frequencyData[index];
-}
-
-void main() {
-  vec2 r = u_resolution;
-  vec2 FC = gl_FragCoord.xy;
-  float t = u_time;
-  vec4 o = vec4(0, 0, 0, 1);
-  
-  // Audio-reactive scaling
-  float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
-  
-  // Dynamic iteration count based on audio intensity and complexity control
-  float maxIterations = 85.0 + u_audioLevel * 14.0 * u_fractalComplexity;
-  
-  for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-    // Audio-reactive 3D transformation
-    vec3 p = vec3((FC.xy*2.-r)/r.x+vec2(0,.9)*audioScale, g-.5);
-    
-    // Audio-reactive rotation with multiple axes
-    float bassRotSpeed = t * (0.2 + u_bassLevel * 0.4 * u_intensity) * u_rotationSpeed;
-    float trebleRotSpeed = t * (0.15 + u_trebleLevel * 0.3 * u_intensity) * u_rotationSpeed;
-    
-    p.xz *= rotate2D(bassRotSpeed);
-    p.yz *= rotate2D(trebleRotSpeed * 0.7);
-    
-    s = 1.0;
-    
-    // Audio-reactive folding parameters
-    vec3 foldParams = vec3(
-      3.0 + u_bassLevel * 0.8 * u_intensity,
-      9.0 + u_midLevel * 1.2 * u_intensity,
-      2.5 + u_trebleLevel * 0.6 * u_intensity
-    );
-    
-    vec3 foldOffset = vec3(
-      5.0 + u_audioLevel * 0.4 * u_intensity,
-      2.0 + getFrequency(0.3) * 0.8 * u_intensity,
-      3.0 + getFrequency(0.7) * 0.6 * u_intensity
-    ) / max(0.1, audioScale * 0.8);
-    
-    // Fractal iteration with audio-reactive parameters
-    for(int j=0; j++<16; p = foldParams - abs(abs(p)*e - foldOffset))
-      s *= e = max(1.005 + u_audioLevel * 0.002 * u_intensity, 
-                   (8.0 + u_bassLevel * 2.0 * u_intensity) / dot(p*.8, p));
-    
-    // Audio-reactive accumulation
-    g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.2 * u_intensity);
-    
-    s = log(s) / max(0.01, g);
-    
-    // Dynamic color based on frequency spectrum and audio characteristics
-    float freqPos = i / maxIterations;
-    float freqIntensity = getFrequency(freqPos);
-    
-    // Multi-layered hue calculation
-    float hue1 = -g * 0.1 + u_bassLevel * 0.15 * u_colorSensitivity;
-    float hue2 = 0.6 + u_midLevel * 0.2 * u_colorSensitivity - freqIntensity * 0.15 * u_colorSensitivity;
-    float hue3 = 0.3 + u_trebleLevel * 0.25 * u_colorSensitivity + t * 0.02;
-    
-    // Blend hues based on audio characteristics
-    float hue = mix(mix(hue1, hue2, u_midLevel * 0.6 * u_colorSensitivity), 
-                    hue3, u_trebleLevel * 0.4 * u_colorSensitivity);
-    
-    // Dynamic saturation and brightness
-    float saturation = 0.6 + u_audioLevel * 0.15 * u_colorSensitivity;
-    float brightness = s / (4200.0 - u_audioLevel * 1200.0 * u_intensity) 
-                      * (1.0 + freqIntensity * 0.4 * u_colorSensitivity);
-    
-    // Beat-reactive brightness pulses
-    float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.8 * u_beatPulse;
-    brightness *= beatPulseEffect;
-    
-    // Color accumulation with audio enhancement
-    o.rgb += hsv(hue, saturation, brightness);
-  }
-  
-  // Final audio-reactive enhancement
-  o.rgb *= 1.0 + u_audioLevel * 0.2 * u_intensity;
-  
-  // Add subtle waveform overlay
-  vec2 cornerPos = FC.xy / r;
-  if (cornerPos.x < 0.12 && cornerPos.y > 0.88) {
-    float waveIndex = cornerPos.x * 8.33;
-    int waveIdx = int(waveIndex * 31.0);
-    float waveValue = u_waveformData[waveIdx];
-    o.rgb += vec3(0.15, 0.1, 0.25) * abs(waveValue) * 2.5 * u_intensity;
-  }
-  
-  outColor = o;
-}
-`
+      precision highp float;
+      out vec4 outColor;
+      
+      uniform vec2 u_resolution;
+      uniform float u_time;
+      uniform float u_audioLevel;
+      uniform float u_bassLevel;
+      uniform float u_midLevel;
+      uniform float u_trebleLevel;
+      uniform float u_frequencyData[64];
+      uniform float u_waveformData[32];
+      uniform float u_intensity;
+      uniform float u_rotationSpeed;
+      uniform float u_colorSensitivity;
+      uniform float u_beatPulse;
+      uniform float u_fractalComplexity;
+      uniform float u_scaleReactivity;
+      
+      #define PI 3.14159265359
+      #define TAU 6.28318530718
+      
+      // HSV to RGB conversion
+      vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+      }
+      
+      // Get frequency for normalized position
+      float getFreq(float pos) {
+        int idx = int(clamp(pos * 63.0, 0.0, 63.0));
+        return u_frequencyData[idx];
+      }
+      
+      // Kaleidoscope symmetry function
+      vec2 kaleidoscope(vec2 uv, float segments) {
+        float angle = atan(uv.y, uv.x);
+        float radius = length(uv);
+        
+        // Create kaleidoscope segments
+        float segmentAngle = TAU / segments;
+        angle = mod(angle, segmentAngle);
+        
+        // Mirror every other segment
+        if (mod(floor(atan(uv.y, uv.x) / segmentAngle), 2.0) > 0.5) {
+          angle = segmentAngle - angle;
+        }
+        
+        return vec2(cos(angle), sin(angle)) * radius;
+      }
+      
+      // Complex pattern generator
+      float pattern(vec2 uv, float time, float audioReactivity) {
+        // Multi-layered geometric patterns
+        float pattern1 = sin(uv.x * 20.0 + time * 2.0) * cos(uv.y * 15.0 + time * 1.5);
+        float pattern2 = sin(length(uv) * 30.0 - time * 3.0) * 0.5;
+        float pattern3 = sin((uv.x + uv.y) * 25.0 + time * 2.0) * cos((uv.x - uv.y) * 18.0 - time * 1.8);
+        
+        // Audio-reactive modulation
+        pattern1 *= 1.0 + audioReactivity * 0.3;
+        pattern2 *= 1.0 + audioReactivity * 0.5;
+        pattern3 *= 1.0 + audioReactivity * 0.4;
+        
+        return (pattern1 + pattern2 + pattern3) / 3.0;
+      }
+      
+      // Sharp line generator
+      float sharpLine(vec2 uv, vec2 start, vec2 end, float thickness) {
+        vec2 pa = uv - start;
+        vec2 ba = end - start;
+        float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+        float dist = length(pa - ba * h);
+        return 1.0 - smoothstep(0.0, thickness, dist);
+      }
+      
+      void main() {
+        vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+        
+        // Audio-reactive scaling and rotation
+        float audioScale = 1.0 + (u_audioLevel * 0.3 + u_bassLevel * 0.4) * u_scaleReactivity;
+        uv *= audioScale;
+        
+        // Main rotation based on time and audio
+        float rotTime = u_time * u_rotationSpeed * (0.5 + u_midLevel * 0.5);
+        mat2 rot = mat2(cos(rotTime), sin(rotTime), -sin(rotTime), cos(rotTime));
+        uv = rot * uv;
+        
+        // Dynamic kaleidoscope segments based on audio
+        float segments = 6.0 + floor(u_bassLevel * 8.0 * u_fractalComplexity);
+        vec2 kUv = kaleidoscope(uv, segments);
+        
+        // Multiple pattern layers
+        float mainPattern = pattern(kUv * 2.0, u_time, u_audioLevel * u_intensity);
+        float detailPattern = pattern(kUv * 5.0, u_time * 1.3, u_trebleLevel * u_intensity);
+        float finePattern = pattern(kUv * 12.0, u_time * 0.8, u_midLevel * u_intensity);
+        
+        // Sharp geometric lines
+        float lines = 0.0;
+        for (float i = 0.0; i < 8.0; i++) {
+          float angle = i * TAU / 8.0 + u_time * u_rotationSpeed * 0.5;
+          vec2 dir = vec2(cos(angle), sin(angle));
+          float lineIntensity = getFreq(i / 8.0) * u_intensity;
+          lines += sharpLine(kUv, vec2(0.0), dir * (0.5 + lineIntensity * 0.3), 0.02 + lineIntensity * 0.01);
+        }
+        
+        // Radial lines
+        float radialLines = 0.0;
+        float radius = length(kUv);
+        float angle = atan(kUv.y, kUv.x);
+        for (float i = 0.0; i < 16.0; i++) {
+          float lineAngle = i * TAU / 16.0;
+          float angleDiff = abs(angle - lineAngle);
+          angleDiff = min(angleDiff, TAU - angleDiff);
+          float freqValue = getFreq(i / 16.0);
+          radialLines += (1.0 - smoothstep(0.0, 0.1 - freqValue * 0.05, angleDiff)) * freqValue;
+        }
+        
+        // Concentric circles
+        float circles = 0.0;
+        for (float i = 1.0; i <= 8.0; i++) {
+          float circleRadius = i * 0.15;
+          float freqValue = getFreq(i / 8.0);
+          float circleWidth = 0.02 + freqValue * 0.01 * u_intensity;
+          circles += (1.0 - smoothstep(0.0, circleWidth, abs(radius - circleRadius))) * freqValue;
+        }
+        
+        // Combine all patterns
+        float combinedPattern = mainPattern * 0.4 + detailPattern * 0.3 + finePattern * 0.3;
+        combinedPattern += lines * 0.6 + radialLines * 0.4 + circles * 0.5;
+        
+        // Audio-reactive color mapping
+        float hue1 = 0.1 + u_bassLevel * 0.3 * u_colorSensitivity + u_time * 0.1;
+        float hue2 = 0.5 + u_midLevel * 0.4 * u_colorSensitivity + u_time * 0.05;
+        float hue3 = 0.8 + u_trebleLevel * 0.2 * u_colorSensitivity - u_time * 0.03;
+        
+        // Multi-hue blending
+        vec3 color1 = hsv2rgb(vec3(hue1, 0.8 + u_audioLevel * 0.2, combinedPattern * 2.0));
+        vec3 color2 = hsv2rgb(vec3(hue2, 0.9, combinedPattern * 1.5));
+        vec3 color3 = hsv2rgb(vec3(hue3, 0.7 + u_trebleLevel * 0.3, combinedPattern * 1.8));
+        
+        // Blend colors based on frequency content
+        vec3 finalColor = mix(mix(color1, color2, u_midLevel * u_colorSensitivity), color3, u_trebleLevel * u_colorSensitivity);
+        
+        // Beat pulse enhancement
+        float beatPulse = 1.0 + u_bassLevel * u_bassLevel * 0.8 * u_beatPulse;
+        finalColor *= beatPulse;
+        
+        // Sharp contrast enhancement
+        finalColor = pow(finalColor, vec3(0.8 + u_audioLevel * 0.3));
+        
+        // Final intensity boost
+        finalColor *= 1.0 + u_audioLevel * 0.2 * u_intensity;
+        
+        outColor = vec4(finalColor, 1.0);
+      }
+    `
 
     // Create and compile shaders
     const createShader = (gl: WebGL2RenderingContext, type: number, source: string) => {
       const shader = gl.createShader(type)
-      if (!shader) {
-        console.error("Failed to create shader")
-        return null
-      }
-
+      if (!shader) return null
       gl.shaderSource(shader, source)
       gl.compileShader(shader)
-
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         console.error("Shader compilation error:", gl.getShaderInfoLog(shader))
         gl.deleteShader(shader)
         return null
       }
-
       return shader
     }
 
-    let cleanup = () => {}
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource)
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource)
 
-    try {
-      vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource)
-      fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource)
+    if (!vertexShader || !fragmentShader) return
 
-      if (!vertexShader || !fragmentShader) {
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
+    const program = gl.createProgram()
+    if (!program) return
 
-      // Create program and link shaders
-      program = gl.createProgram()
-      if (!program) {
-        console.error("Failed to create program")
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
 
-      gl.attachShader(program, vertexShader)
-      gl.attachShader(program, fragmentShader)
-      gl.linkProgram(program)
-
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error("Program linking error:", gl.getProgramInfoLog(program))
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
-
-      // Set up position buffer (full screen quad)
-      positionBuffer = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-
-      const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
-
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
-
-      // Use program
-      gl.useProgram(program)
-
-      // Set up position attribute
-      const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
-      gl.enableVertexAttribArray(positionAttributeLocation)
-      gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
-
-      // Get uniform locations
-      const resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution")
-      const timeUniformLocation = gl.getUniformLocation(program, "u_time")
-      
-      // Audio uniform locations
-      const audioLevelUniformLocation = gl.getUniformLocation(program, "u_audioLevel")
-      const bassLevelUniformLocation = gl.getUniformLocation(program, "u_bassLevel")
-      const midLevelUniformLocation = gl.getUniformLocation(program, "u_midLevel")
-      const trebleLevelUniformLocation = gl.getUniformLocation(program, "u_trebleLevel")
-      const frequencyDataUniformLocation = gl.getUniformLocation(program, "u_frequencyData")
-      const waveformDataUniformLocation = gl.getUniformLocation(program, "u_waveformData")
-      
-      // Control uniform locations
-      const intensityUniformLocation = gl.getUniformLocation(program, "u_intensity")
-      const rotationSpeedUniformLocation = gl.getUniformLocation(program, "u_rotationSpeed")
-      const colorSensitivityUniformLocation = gl.getUniformLocation(program, "u_colorSensitivity")
-      const beatPulseUniformLocation = gl.getUniformLocation(program, "u_beatPulse")
-      const fractalComplexityUniformLocation = gl.getUniformLocation(program, "u_fractalComplexity")
-      const scaleReactivityUniformLocation = gl.getUniformLocation(program, "u_scaleReactivity")
-
-      // Automatic rotation variables
-      let currentRotationX = 0
-      let currentRotationY = 0.5
-
-      // Render loop
-      const startTime = Date.now()
-
-      const render = () => {
-        if (!gl || !program) return
-
-        const currentTime = Date.now()
-        const deltaTime = (currentTime - startTime) / 1000
-
-        // Get current audio data
-        const audioData = analyzeAudio()
-
-        // Update time uniform
-        gl.uniform1f(timeUniformLocation, deltaTime)
-
-        // Update resolution uniform
-        gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height)
-
-        // Update audio uniforms
-        if (audioLevelUniformLocation) {
-          gl.uniform1f(audioLevelUniformLocation, audioData.level)
-        }
-        if (bassLevelUniformLocation) {
-          gl.uniform1f(bassLevelUniformLocation, audioData.bassLevel)
-        }
-        if (midLevelUniformLocation) {
-          gl.uniform1f(midLevelUniformLocation, audioData.midLevel)
-        }
-        if (trebleLevelUniformLocation) {
-          gl.uniform1f(trebleLevelUniformLocation, audioData.trebleLevel)
-        }
-        if (frequencyDataUniformLocation) {
-          gl.uniform1fv(frequencyDataUniformLocation, audioData.frequencyData)
-        }
-        if (waveformDataUniformLocation) {
-          gl.uniform1fv(waveformDataUniformLocation, audioData.waveformData)
-        }
-
-        // Update control uniforms
-        if (intensityUniformLocation) {
-          gl.uniform1f(intensityUniformLocation, intensity)
-        }
-        if (rotationSpeedUniformLocation) {
-          gl.uniform1f(rotationSpeedUniformLocation, rotationSpeed)
-        }
-        if (colorSensitivityUniformLocation) {
-          gl.uniform1f(colorSensitivityUniformLocation, colorSensitivity)
-        }
-        if (beatPulseUniformLocation) {
-          gl.uniform1f(beatPulseUniformLocation, beatPulse)
-        }
-        if (fractalComplexityUniformLocation) {
-          gl.uniform1f(fractalComplexityUniformLocation, fractalComplexity)
-        }
-        if (scaleReactivityUniformLocation) {
-          gl.uniform1f(scaleReactivityUniformLocation, scaleReactivity)
-        }
-
-        // Clear canvas and draw
-        gl.clearColor(0, 0, 0, 1)
-        gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-
-        requestAnimationFrame(render)
-      }
-
-      render()
-
-      // Cleanup
-      cleanup = () => {
-        window.removeEventListener("resize", resizeCanvas)
-
-        if (program) gl.deleteProgram(program)
-        if (vertexShader) gl.deleteShader(vertexShader)
-        if (fragmentShader) gl.deleteShader(fragmentShader)
-        if (positionBuffer) gl.deleteBuffer(positionBuffer)
-      }
-    } catch (error) {
-      console.error("Error during WebGL initialization or rendering:", error)
-      cleanup = () => {
-        window.removeEventListener("resize", resizeCanvas)
-      }
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error("Program linking error:", gl.getProgramInfoLog(program))
+      return
     }
 
+    programRef.current = program
+
+    // Set up vertex buffer
+    const positionBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+    const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+
+    const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
+    gl.enableVertexAttribArray(positionAttributeLocation)
+    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
+
+    // Get uniform locations
+    resolutionUniformLocationRef.current = gl.getUniformLocation(program, "u_resolution")
+    timeUniformLocationRef.current = gl.getUniformLocation(program, "u_time")
+    audioLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_audioLevel")
+    bassLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_bassLevel")
+    midLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_midLevel")
+    trebleLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_trebleLevel")
+    frequencyDataUniformLocationRef.current = gl.getUniformLocation(program, "u_frequencyData")
+    waveformDataUniformLocationRef.current = gl.getUniformLocation(program, "u_waveformData")
+    intensityUniformLocationRef.current = gl.getUniformLocation(program, "u_intensity")
+    rotationSpeedUniformLocationRef.current = gl.getUniformLocation(program, "u_rotationSpeed")
+    colorSensitivityUniformLocationRef.current = gl.getUniformLocation(program, "u_colorSensitivity")
+    beatPulseUniformLocationRef.current = gl.getUniformLocation(program, "u_beatPulse")
+    fractalComplexityUniformLocationRef.current = gl.getUniformLocation(program, "u_fractalComplexity")
+    scaleReactivityUniformLocationRef.current = gl.getUniformLocation(program, "u_scaleReactivity")
+
+    const startTime = performance.now()
+
+    const render = () => {
+      if (!programRef.current || !gl) return
+      gl.useProgram(programRef.current)
+
+      const audioData = analyzeAudio()
+      const currentTime = (performance.now() - startTime) / 1000
+
+      // Update all uniforms
+      if (timeUniformLocationRef.current) gl.uniform1f(timeUniformLocationRef.current, currentTime)
+      if (resolutionUniformLocationRef.current) gl.uniform2f(resolutionUniformLocationRef.current, canvas.width, canvas.height)
+      if (audioLevelUniformLocationRef.current) gl.uniform1f(audioLevelUniformLocationRef.current, audioData.level)
+      if (bassLevelUniformLocationRef.current) gl.uniform1f(bassLevelUniformLocationRef.current, audioData.bassLevel)
+      if (midLevelUniformLocationRef.current) gl.uniform1f(midLevelUniformLocationRef.current, audioData.midLevel)
+      if (trebleLevelUniformLocationRef.current) gl.uniform1f(trebleLevelUniformLocationRef.current, audioData.trebleLevel)
+      if (frequencyDataUniformLocationRef.current) gl.uniform1fv(frequencyDataUniformLocationRef.current, audioData.frequencyData)
+      if (waveformDataUniformLocationRef.current) gl.uniform1fv(waveformDataUniformLocationRef.current, audioData.waveformData)
+      if (intensityUniformLocationRef.current) gl.uniform1f(intensityUniformLocationRef.current, intensity)
+      if (rotationSpeedUniformLocationRef.current) gl.uniform1f(rotationSpeedUniformLocationRef.current, rotationSpeed)
+      if (colorSensitivityUniformLocationRef.current) gl.uniform1f(colorSensitivityUniformLocationRef.current, colorSensitivity)
+      if (beatPulseUniformLocationRef.current) gl.uniform1f(beatPulseUniformLocationRef.current, beatPulse)
+      if (fractalComplexityUniformLocationRef.current) gl.uniform1f(fractalComplexityUniformLocationRef.current, fractalComplexity)
+      if (scaleReactivityUniformLocationRef.current) gl.uniform1f(scaleReactivityUniformLocationRef.current, scaleReactivity)
+
+      gl.clearColor(0, 0, 0, 1)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+
+      animationRef.current = requestAnimationFrame(render)
+    }
+
+    render()
+
     return () => {
-      cleanup()
+      window.removeEventListener("resize", resizeCanvas)
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      if (program) {
+        gl.deleteProgram(program)
+      }
+      gl.deleteShader(vertexShader)
+      gl.deleteShader(fragmentShader)
+      gl.deleteBuffer(positionBuffer)
     }
   }, [analyzeAudio, intensity, rotationSpeed, colorSensitivity, beatPulse, fractalComplexity, scaleReactivity])
 
@@ -757,7 +655,7 @@ void main() {
         }}
       />
 
-      {/* Audio Controls */}
+      {/* Audio Controls - Same as Spaceship but with Kaleidoscope branding */}
       <div
         style={{
           position: "absolute",
@@ -775,6 +673,11 @@ void main() {
           border: "1px solid rgba(255, 255, 255, 0.1)"
         }}
       >
+        {/* Component Title */}
+        <div style={{ marginBottom: "15px", fontSize: "16px", fontWeight: "bold", textAlign: "center" }}>
+          🔮 Kaleidoscope Visualizer
+        </div>
+
         {/* File Upload */}
         <div style={{ marginBottom: "15px" }}>
           <label style={{ display: "block", marginBottom: "8px", fontSize: "12px", opacity: 0.8 }}>
@@ -907,7 +810,7 @@ void main() {
         {/* Visual Controls */}
         <div style={{ marginBottom: "15px", borderTop: "1px solid rgba(255, 255, 255, 0.2)", paddingTop: "15px" }}>
           <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "bold", opacity: 0.9 }}>
-            Visual Controls
+            Kaleidoscope Controls
           </div>
 
           {/* Intensity */}
@@ -994,10 +897,10 @@ void main() {
             />
           </div>
 
-          {/* Fractal Complexity */}
+          {/* Fractal Complexity (now controls kaleidoscope segments) */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Fractal Complexity: {Math.round(fractalComplexity * 100)}%
+              Kaleidoscope Segments: {Math.round(fractalComplexity * 100)}%
             </label>
             <input
               type="range"
@@ -1120,7 +1023,4 @@ void main() {
       )}
     </div>
   )
-}
-
-export default TweetGLSLVisualization
-
+} 

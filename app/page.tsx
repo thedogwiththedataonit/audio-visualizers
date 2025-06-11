@@ -1,11 +1,11 @@
 "use client"
 
-import TweetGLSLVisualization from "../components/GLSL/SpaceshipGLSLVisualization"
+import SpaceshipGLSLVisualization from "../components/GLSL/SpaceshipGLSLVisualization"
 
 export default function Page() {
   return (
     <main>
-      <TweetGLSLVisualization />
+      <SpaceshipGLSLVisualization />
     </main>
   )
 }
