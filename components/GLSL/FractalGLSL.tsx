@@ -23,7 +23,6 @@ export default function FractalGLSLVisualization() {
   const uniformLocationsRef = useRef<{
     resolution: WebGLUniformLocation | null
     time: WebGLUniformLocation | null
-    mouse: WebGLUniformLocation | null
     speed: WebGLUniformLocation | null
     intensity: WebGLUniformLocation | null
     baseHue: WebGLUniformLocation | null
@@ -42,7 +41,6 @@ export default function FractalGLSLVisualization() {
   }>({
     resolution: null,
     time: null,
-    mouse: null,
     speed: null,
     intensity: null,
     baseHue: null,
@@ -67,7 +65,6 @@ export default function FractalGLSLVisualization() {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
 
   // State for UI controls
-  const [mousePosition, setMousePosition] = useState<[number, number]>([0.5, 0.5])
   const [speed, setSpeed] = useState<number>(1.0)
   const [intensity, setIntensity] = useState<number>(1.0)
   const [showControls, setShowControls] = useState<boolean>(true)
@@ -92,7 +89,6 @@ export default function FractalGLSLVisualization() {
   const [fractalComplexity, setFractalComplexity] = useState<number>(0.5)
 
   // Store current values in refs so the animation loop can access them without dependencies
-  const mousePositionRef = useRef<[number, number]>([0.5, 0.5])
   const speedRef = useRef<number>(1.0)
   const intensityRef = useRef<number>(1.0)
   const baseHueRef = useRef<number>(0.08)
@@ -116,10 +112,6 @@ export default function FractalGLSLVisualization() {
   })
 
   // Update refs when state changes
-  useEffect(() => {
-    mousePositionRef.current = mousePosition
-  }, [mousePosition])
-
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
@@ -468,7 +460,6 @@ export default function FractalGLSLVisualization() {
     // Update uniforms
     gl.uniform2f(uniforms.resolution!, canvas.width, canvas.height)
     gl.uniform1f(uniforms.time!, elapsedTime)
-    gl.uniform2f(uniforms.mouse!, mousePositionRef.current[0], mousePositionRef.current[1])
     gl.uniform1f(uniforms.speed!, speedRef.current)
     gl.uniform1f(uniforms.intensity!, intensityRef.current)
     gl.uniform1f(uniforms.baseHue!, baseHueRef.current)
@@ -531,7 +522,6 @@ export default function FractalGLSLVisualization() {
   precision highp float;
   out vec4 outColor;
   uniform vec2 u_resolution;
-  uniform vec2 u_mouse;
   uniform float u_time;
   uniform float u_speed;
   uniform float u_intensity;
@@ -587,8 +577,8 @@ export default function FractalGLSLVisualization() {
     // Audio-reactive scaling - replace static breathing with audio level
     float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity;
     
-    // Use mouse position to influence rotation axis, with treble affecting Z component
-    vec3 rotAxis = normalize(vec3(u_mouse.x, u_mouse.y, 0.5 + u_trebleLevel * 0.3));
+    // Use a fixed rotation axis that changes with treble
+    vec3 rotAxis = normalize(vec3(0.7, 0.5, 0.3 + u_trebleLevel * 0.4));
     
     // Dynamic iteration count based on audio intensity and fractal complexity control
     float maxIterations = 18.0 + u_audioLevel * 6.0 * u_fractalComplexity;
@@ -724,7 +714,6 @@ export default function FractalGLSLVisualization() {
     uniformLocationsRef.current = {
       resolution: gl.getUniformLocation(program, "u_resolution"),
       time: gl.getUniformLocation(program, "u_time"),
-      mouse: gl.getUniformLocation(program, "u_mouse"),
       speed: gl.getUniformLocation(program, "u_speed"),
       intensity: gl.getUniformLocation(program, "u_intensity"),
       baseHue: gl.getUniformLocation(program, "u_baseHue"),
@@ -742,19 +731,6 @@ export default function FractalGLSLVisualization() {
       fractalComplexity: gl.getUniformLocation(program, "u_fractalComplexity"),
     }
 
-    // Add mouse event handlers
-    const handleMouseMove = (event: MouseEvent) => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-
-      const rect = canvas.getBoundingClientRect()
-      const x = (event.clientX - rect.left) / canvas.width
-      const y = 1.0 - (event.clientY - rect.top) / canvas.height // Flip Y for WebGL
-      setMousePosition([x, y])
-    }
-
-    window.addEventListener("mousemove", handleMouseMove)
-
     // Add double-click event listener
     canvas.addEventListener("dblclick", toggleFullscreen)
 
@@ -767,7 +743,6 @@ export default function FractalGLSLVisualization() {
     // Cleanup
     return () => {
       window.removeEventListener("resize", resizeCanvas)
-      window.removeEventListener("mousemove", handleMouseMove)
       canvas.removeEventListener("dblclick", toggleFullscreen)
       if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current)
@@ -1113,7 +1088,6 @@ export default function FractalGLSLVisualization() {
               </div>
 
               <div className="text-sm opacity-70 mt-4">
-                <p>Move your mouse to change rotation</p>
                 <p>Double-click for fullscreen</p>
                 <p>Upload audio for reactive effects</p>
               </div>
