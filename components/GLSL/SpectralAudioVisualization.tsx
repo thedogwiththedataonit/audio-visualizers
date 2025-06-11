@@ -11,7 +11,7 @@ interface AudioData {
   waveformData: Float32Array
 }
 
-export default function FractalAudioVisualization() {
+export default function SpectralAudioVisualization() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -379,7 +379,7 @@ export default function FractalAudioVisualization() {
       }
     `
 
-    // Enhanced Mandelbrot-style fractal shader with audio reactivity
+    // Spectral wave interference shader with audio reactivity
     const fragmentShaderSource = `#version 300 es
   precision highp float;
   out vec4 outColor;
@@ -404,13 +404,6 @@ export default function FractalAudioVisualization() {
   uniform float u_fractalComplexity;
   uniform float u_scaleReactivity;
   
-  // 2D rotation matrix for 3D transformations
-  mat2 rotate2D(float angle) {
-    float s = sin(angle);
-    float c = cos(angle);
-    return mat2(c, -s, s, c);
-  }
-  
   // HSV to RGB color conversion
   vec3 hsv(float h, float s, float v) {
     vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
@@ -424,10 +417,10 @@ export default function FractalAudioVisualization() {
     return u_frequencyData[index];
   }
   
-  // Rotation matrix
-  mat2 rotate(float angle) {
-    float c = cos(angle);
+  // 2D rotation matrix
+  mat2 rotate2D(float angle) {
     float s = sin(angle);
+    float c = cos(angle);
     return mat2(c, -s, s, c);
   }
   
@@ -436,115 +429,101 @@ export default function FractalAudioVisualization() {
     vec2 FC = gl_FragCoord.xy;
     float t = u_time;
     
-    // Audio-reactive zoom and translation
-    float audioZoom = 1.0 + (u_audioLevel * 0.8 + u_bassLevel * 0.4) * u_scaleReactivity * u_intensity;
-    vec2 audioOffset = vec2(
-      u_bassLevel * 0.05 * u_intensity,
-      u_midLevel * 0.05 * u_intensity
-    );
-    
-    // Normalize coordinates with audio-reactive scaling
+    // Normalize coordinates
     vec2 uv = (FC.xy - 0.5 * r) / r.y;
-    uv /= audioZoom;
-    uv += audioOffset;
     
-    // Audio-reactive scaling (like breathing effect)
-    float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
+    // Audio-reactive scaling and rotation
+    float audioScale = 1.0 + (u_audioLevel * 0.4 + u_bassLevel * 0.2) * u_scaleReactivity * u_intensity;
+    uv *= audioScale;
     
-    // Inertia-style 3D ray marching fractal with audio reactivity
-    vec4 o = vec4(0, 0, 0, 1);
-    float maxIterations = 35.0 + u_audioLevel * 14.0 * u_fractalComplexity;
+    // Rotate based on audio
+    float rotSpeed = t * (0.1 + u_bassLevel * 0.3 * u_intensity) * u_rotationSpeed;
+    uv *= rotate2D(rotSpeed);
     
-    for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-      // Audio-reactive 3D transformation - convert 2D screen to 3D space (moved lower)
-      vec3 p = vec3((FC.xy*2.-r)/r.x*audioScale, g-1.2);
+    // Spectral wave interference system
+    vec3 finalColor = vec3(0.0);
+    float spectralIntensity = 0.0;
+    
+    // Create multiple spectral bands (simulating frequency spectrum)
+    int numBands = int(8.0 + u_fractalComplexity * 16.0);
+    
+    for(int i = 0; i < 32; i++) {
+      if(i >= numBands) break;
       
-      // Enhanced audio-reactive rotation with multiple axes and continuous motion
-      float bassRotSpeed = t * (0.3 + u_bassLevel * 0.6 * u_intensity) * u_rotationSpeed;
-      float trebleRotSpeed = t * (0.25 + u_trebleLevel * 0.5 * u_intensity) * u_rotationSpeed;
-      float midRotSpeed = t * (0.2 + u_midLevel * 0.4 * u_intensity) * u_rotationSpeed;
+      float bandPos = float(i) / float(numBands);
+      float freqIntensity = getFrequency(bandPos);
       
-      // Multiple rotation layers for more complex movement
-      p.xz *= rotate2D(bassRotSpeed);
-      p.yz *= rotate2D(trebleRotSpeed * 0.8);
-      p.xy *= rotate2D(midRotSpeed * 0.6);
-      
-      // Additional continuous rotation for constant movement
-      p.xz *= rotate2D(t * 0.1 * u_rotationSpeed);
-      p.yz *= rotate2D(t * 0.08 * u_rotationSpeed);
-      
-      s = 1.0;
-      
-      // Audio-reactive folding parameters
-      vec3 foldParams = vec3(
-        3.0 + u_bassLevel * 0.8 * u_intensity,
-        9.0 + u_midLevel * 1.2 * u_intensity,
-        2.5 + u_trebleLevel * 0.6 * u_intensity
+      // Create wave interference pattern for each band
+      vec2 waveCenter = vec2(
+        sin(t * 0.3 + bandPos * 6.28318 + u_bassLevel * 3.14159 * u_intensity) * 0.8,
+        cos(t * 0.2 + bandPos * 6.28318 + u_trebleLevel * 3.14159 * u_intensity) * 0.6
       );
       
-      vec3 foldOffset = vec3(
-        5.0 + u_audioLevel * 0.4 * u_intensity,
-        2.0 + getFrequency(0.3) * 0.8 * u_intensity,
-        3.0 + getFrequency(0.7) * 0.6 * u_intensity
-      ) / max(0.1, audioScale * 0.8);
+      // Distance from wave center
+      float dist = length(uv - waveCenter);
       
-      // Inertia-style fractal iteration with audio-reactive parameters
-      for(int j=0; j++<16; p = foldParams - abs(abs(p)*e - foldOffset))
-        s *= e = max(1.005 + u_audioLevel * 0.002 * u_intensity, 
-                     (8.0 + u_bassLevel * 2.0 * u_intensity) / dot(p*.8, p));
+      // Audio-reactive wave parameters
+      float waveFreq = 8.0 + freqIntensity * 20.0 * u_intensity + u_midLevel * 10.0 * u_intensity;
+      float waveAmp = 0.3 + freqIntensity * 0.7 * u_intensity;
+      float waveSpeed = t * (2.0 + u_audioLevel * 3.0 * u_intensity);
       
-      // Audio-reactive accumulation with line patterns
-      g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.2 * u_intensity);
+      // Calculate wave interference
+      float wave = sin(dist * waveFreq + waveSpeed + bandPos * 3.14159) * waveAmp;
+      wave *= exp(-dist * (1.5 - freqIntensity * 0.8 * u_intensity)); // Distance falloff
       
-      s = log(s) / max(0.01, g);
+      // Beat-reactive pulse
+      float beatPulse = 1.0 + u_bassLevel * u_bassLevel * 0.5 * u_beatPulse;
+      wave *= beatPulse;
       
-      // Dynamic color based on frequency spectrum and audio characteristics
-      float freqPos = i / maxIterations;
-      float freqIntensity = getFrequency(freqPos);
+      // Color for this spectral band
+      float hue = bandPos * 0.8 + t * 0.05 + freqIntensity * 0.2 * u_colorSensitivity;
+      float saturation = 0.7 + freqIntensity * 0.2 * u_colorSensitivity + u_audioLevel * 0.1;
+      float brightness = abs(wave) * (0.5 + freqIntensity * 0.8 * u_intensity);
       
-      // Multi-layered hue calculation with shifted color palette (purple/cyan/magenta theme)
-      float hue1 = 0.8 - g * 0.1 + u_bassLevel * 0.15 * u_colorSensitivity;
-      float hue2 = 0.55 + u_midLevel * 0.2 * u_colorSensitivity - freqIntensity * 0.15 * u_colorSensitivity;
-      float hue3 = 0.9 + u_trebleLevel * 0.25 * u_colorSensitivity + t * 0.02;
+      vec3 bandColor = hsv(hue, saturation, brightness);
       
-      // Blend hues based on audio characteristics and 3D position
-      float hue = mix(mix(hue1, hue2, u_midLevel * 0.6 * u_colorSensitivity), 
-                      hue3, u_trebleLevel * 0.4 * u_colorSensitivity);
-      
-      // Enhanced saturation and brightness for vibrant purple/cyan palette
-      float saturation = 0.85 + u_audioLevel * 0.1 * u_colorSensitivity;
-      float brightness = s / (3800.0 - u_audioLevel * 1000.0 * u_intensity) 
-                        * (1.2 + freqIntensity * 0.5 * u_colorSensitivity);
-      
-      // Enhanced beat-reactive brightness pulses with color shifting
-      float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 1.0 * u_beatPulse;
-      brightness *= beatPulseEffect;
-      
-      // Add color intensity boost for the new palette
-      brightness *= 1.3;
-      
-      // Color accumulation with audio enhancement
-      o.rgb += hsv(hue, saturation, brightness);
+      // Accumulate spectral bands with interference
+      finalColor += bandColor;
+      spectralIntensity += abs(wave);
     }
     
-    // Final audio-reactive enhancement with purple/cyan boost
-    o.rgb *= 1.2 + u_audioLevel * 0.3 * u_intensity;
+    // Add spectral harmonics (higher frequency components)
+    vec2 harmonicUV = uv * 2.0;
+    for(int h = 0; h < 8; h++) {
+      float harmonicFreq = float(h + 1) * 2.0;
+      float harmonicIntensity = getFrequency(float(h) / 7.0);
+      
+      float harmonicWave = sin(length(harmonicUV) * harmonicFreq * 4.0 + t * 3.0 + u_trebleLevel * 6.28318 * u_intensity) 
+                          * harmonicIntensity * 0.3 * u_intensity;
+      
+      float harmonicHue = 0.1 + float(h) * 0.1 + t * 0.02;
+      vec3 harmonicColor = hsv(harmonicHue, 0.8, abs(harmonicWave) * 0.4);
+      
+      finalColor += harmonicColor;
+    }
     
-    // Enhance purple and cyan tones
-    o.rgb.r *= 1.1 + u_trebleLevel * 0.2 * u_intensity;  // Enhance magenta/purple
-    o.rgb.b *= 1.2 + u_bassLevel * 0.3 * u_intensity;   // Enhance blue/cyan
-    o.rgb.g *= 0.9 + u_midLevel * 0.2 * u_intensity;    // Reduce green slightly
+    // Spectral glow and enhancement
+    float glowIntensity = spectralIntensity * 0.3;
+    finalColor += vec3(glowIntensity * 0.2, glowIntensity * 0.1, glowIntensity * 0.4);
     
-    // Add subtle waveform overlay in corner
+    // Audio-reactive color enhancement
+    finalColor.r *= 1.0 + u_trebleLevel * 0.3 * u_colorSensitivity;
+    finalColor.g *= 1.0 + u_midLevel * 0.4 * u_colorSensitivity;
+    finalColor.b *= 1.0 + u_bassLevel * 0.5 * u_colorSensitivity;
+    
+    // Final enhancement
+    finalColor *= 1.0 + u_audioLevel * 0.4 * u_intensity;
+    
+    // Add subtle waveform overlay
     vec2 cornerPos = FC.xy / r;
-    if (cornerPos.x < 0.12 && cornerPos.y > 0.88) {
-      float waveIndex = cornerPos.x * 8.33;
+    if (cornerPos.x < 0.1 && cornerPos.y > 0.9) {
+      float waveIndex = cornerPos.x * 10.0;
       int waveIdx = int(waveIndex * 31.0);
       float waveValue = u_waveformData[waveIdx];
-      o.rgb += vec3(0.15, 0.1, 0.25) * abs(waveValue) * 2.5 * u_intensity;
+      finalColor += vec3(0.2, 0.15, 0.3) * abs(waveValue) * 2.0 * u_intensity;
     }
     
-    outColor = o;
+    outColor = vec4(finalColor, 1.0);
   }
 `
 
@@ -979,10 +958,10 @@ export default function FractalAudioVisualization() {
             />
           </div>
 
-          {/* Fractal Complexity */}
+          {/* Spectral Complexity */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Fractal Complexity: {Math.round(fractalComplexity * 100)}%
+              Spectral Complexity: {Math.round(fractalComplexity * 100)}%
             </label>
             <input
               type="range"
@@ -1104,7 +1083,7 @@ export default function FractalAudioVisualization() {
         </div>
       )}
 
-      {/* Fractal Info */}
+      {/* Spectral Info */}
       <div
         style={{
           position: "absolute",
@@ -1119,7 +1098,7 @@ export default function FractalAudioVisualization() {
           borderRadius: "5px"
         }}
       >
-        Audio-Reactive Inertia Fractal
+        Audio-Reactive Spectral Waves
       </div>
     </div>
   )

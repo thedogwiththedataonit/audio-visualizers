@@ -84,6 +84,19 @@ export default function RootLayout({
               >
                 Rehydration
               </Link>
+              <Link 
+                href="/ether" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Ether
+              </Link>
+              <Link 
+                href="/spectral" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Spectral
+              </Link>
+              
             </div>
         {children}
       </body>
