@@ -78,6 +78,12 @@ export default function RootLayout({
               >
                 Tunnel
               </Link>
+              <Link 
+                href="/rehydration" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Rehydration
+              </Link>
             </div>
         {children}
       </body>

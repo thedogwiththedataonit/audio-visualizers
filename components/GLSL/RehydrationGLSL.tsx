@@ -13,19 +13,13 @@ interface AudioData {
 }
 
 /**
- * Audio-Reactive GLSL Visualization Component
+ * Rehydration Audio-Reactive GLSL Visualization Component
  *
- * An enhanced React component that renders a WebGL visualization based on fractal ray marching
- * with comprehensive audio reactivity and visual controls.
- *
- * Features:
- * - Audio-reactive fractal rendering with frequency analysis
- * - Full audio player with upload, playback controls, and timeline
- * - Real-time visual controls for audio responsiveness
- * - Mouse inertia controls for manual interaction
- * - Support for MP3, WAV, and OGG audio formats
+ * A fluid, organic audio-reactive visualization featuring flowing patterns,
+ * liquid-like transformations, and hydrating color schemes that respond
+ * dynamically to music with a completely different mathematical approach.
  */
-const TweetGLSLVisualization: React.FC = () => {
+const RehydrationGLSLVisualization: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -37,12 +31,6 @@ const TweetGLSLVisualization: React.FC = () => {
   // WebGL uniform locations
   const resolutionUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const timeUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const mouseUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const rotationXUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const rotationYUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const colorShiftUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  
-  // Audio uniform locations
   const audioLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const bassLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const midLevelUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
@@ -50,13 +38,13 @@ const TweetGLSLVisualization: React.FC = () => {
   const frequencyDataUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   const waveformDataUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
   
-  // Audio control uniform locations
+  // Control uniform locations
   const intensityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const rotationSpeedUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const colorSensitivityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const beatPulseUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const fractalComplexityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
-  const scaleReactivityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const flowSpeedUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const colorShiftUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const waveAmplitudeUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const liquidityUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
+  const turbulenceUniformLocationRef = useRef<WebGLUniformLocation | null>(null)
 
   // Audio state
   const [isPlaying, setIsPlaying] = useState(false)
@@ -67,13 +55,13 @@ const TweetGLSLVisualization: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false)
 
   // Visual control state
-  const [intensity, setIntensity] = useState(0.5)
-  const [rotationSpeed, setRotationSpeed] = useState(0.5)
-  const [colorSensitivity, setColorSensitivity] = useState(0.5)
-  const [beatPulse, setBeatPulse] = useState(0.5)
-  const [fractalComplexity, setFractalComplexity] = useState(0.5)
-  const [smoothing, setSmoothing] = useState(0.85)
-  const [scaleReactivity, setScaleReactivity] = useState(0.5)
+  const [intensity, setIntensity] = useState(0.6)
+  const [flowSpeed, setFlowSpeed] = useState(0.4)
+  const [colorShift, setColorShift] = useState(0.3)
+  const [waveAmplitude, setWaveAmplitude] = useState(0.5)
+  const [liquidity, setLiquidity] = useState(0.7)
+  const [turbulence, setTurbulence] = useState(0.4)
+  const [smoothing, setSmoothing] = useState(0.8)
 
   // Audio data arrays
   const frequencyDataRef = useRef(new Float32Array(64))
@@ -92,7 +80,6 @@ const TweetGLSLVisualization: React.FC = () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
 
-      // Resume context if suspended (browser autoplay policy)
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume()
       }
@@ -111,54 +98,45 @@ const TweetGLSLVisualization: React.FC = () => {
     analyser.getByteFrequencyData(dataArray)
     analyser.getByteTimeDomainData(waveformArray)
 
-    // Calculate frequency bands
-    const bassEnd = Math.floor(bufferLength * 0.1)
-    const midEnd = Math.floor(bufferLength * 0.5)
+    const bassEnd = Math.floor(bufferLength * 0.12)
+    const midEnd = Math.floor(bufferLength * 0.6)
 
     let bassSum = 0, midSum = 0, trebleSum = 0, totalSum = 0
 
-    // Bass (0-10% of frequency range)
     for (let i = 0; i < bassEnd; i++) {
       bassSum += dataArray[i]
     }
     bassSum /= bassEnd
 
-    // Mid (10-50% of frequency range)
     for (let i = bassEnd; i < midEnd; i++) {
       midSum += dataArray[i]
     }
     midSum /= (midEnd - bassEnd)
 
-    // Treble (50-100% of frequency range)
     for (let i = midEnd; i < bufferLength; i++) {
       trebleSum += dataArray[i]
     }
     trebleSum /= (bufferLength - midEnd)
 
-    // Overall level
     for (let i = 0; i < bufferLength; i++) {
       totalSum += dataArray[i]
     }
     const level = totalSum / bufferLength / 255
 
-    // Normalize frequency bands
     const bassLevel = bassSum / 255
     const midLevel = midSum / 255
     const trebleLevel = trebleSum / 255
 
-    // Downsample frequency data to 64 bins
     for (let i = 0; i < 64; i++) {
       const index = Math.floor((i / 64) * bufferLength)
       frequencyDataRef.current[i] = dataArray[index] / 255
     }
 
-    // Downsample waveform data to 32 bins
     for (let i = 0; i < 32; i++) {
       const index = Math.floor((i / 32) * bufferLength)
       waveformDataRef.current[i] = (waveformArray[index] - 128) / 128
     }
 
-    // Smooth the audio data to prevent jarring transitions
     const smoothingFactor = smoothing
     const current = smoothedAudioDataRef.current
 
@@ -167,7 +145,6 @@ const TweetGLSLVisualization: React.FC = () => {
     current.midLevel = current.midLevel * smoothingFactor + midLevel * (1 - smoothingFactor)
     current.trebleLevel = current.trebleLevel * smoothingFactor + trebleLevel * (1 - smoothingFactor)
 
-    // Update frequency and waveform arrays
     for (let i = 0; i < 64; i++) {
       current.frequencyData[i] = current.frequencyData[i] * smoothingFactor + frequencyDataRef.current[i] * (1 - smoothingFactor)
     }
@@ -189,7 +166,6 @@ const TweetGLSLVisualization: React.FC = () => {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(file.name.replace(/\.[^/.]+$/, ""))
@@ -203,7 +179,6 @@ const TweetGLSLVisualization: React.FC = () => {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -213,7 +188,6 @@ const TweetGLSLVisualization: React.FC = () => {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -223,7 +197,7 @@ const TweetGLSLVisualization: React.FC = () => {
       const analyser = audioContextRef.current.createAnalyser()
 
       analyser.fftSize = 512
-      analyser.smoothingTimeConstant = 0.3
+      analyser.smoothingTimeConstant = 0.25
 
       source.connect(analyser)
       analyser.connect(audioContextRef.current.destination)
@@ -242,7 +216,6 @@ const TweetGLSLVisualization: React.FC = () => {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(filename.replace(/\.[^/.]+$/, ""))
@@ -256,7 +229,6 @@ const TweetGLSLVisualization: React.FC = () => {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -266,7 +238,6 @@ const TweetGLSLVisualization: React.FC = () => {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -276,7 +247,7 @@ const TweetGLSLVisualization: React.FC = () => {
       const analyser = audioContextRef.current.createAnalyser()
 
       analyser.fftSize = 512
-      analyser.smoothingTimeConstant = 0.3
+      analyser.smoothingTimeConstant = 0.25
 
       source.connect(analyser)
       analyser.connect(audioContextRef.current.destination)
@@ -369,22 +340,15 @@ const TweetGLSLVisualization: React.FC = () => {
   }, [loadAudioFromUrl])
 
   useEffect(() => {
-    let program: WebGLProgram | null = null
-    let vertexShader: WebGLShader | null = null
-    let fragmentShader: WebGLShader | null = null
-    let positionBuffer: WebGLBuffer | null = null
-    let gl: WebGL2RenderingContext | null = null
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Get WebGL2 context
-    gl = canvas.getContext("webgl2")
+    const gl = canvas.getContext("webgl2")
     if (!gl) {
       console.error("WebGL2 not supported")
       return
     }
 
-    // Resize canvas to full screen
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
@@ -394,18 +358,15 @@ const TweetGLSLVisualization: React.FC = () => {
     resizeCanvas()
     window.addEventListener("resize", resizeCanvas)
 
-    // Vertex shader source - minimal pass-through shader
     const vertexShaderSource = `#version 300 es
-    precision highp float;
-    
-    in vec4 a_position;
-    
-    void main() {
-      gl_Position = a_position;
-    }
+      precision highp float;
+      in vec4 a_position;
+      void main() {
+        gl_Position = a_position;
+      }
     `
 
-    // Audio-reactive fragment shader source
+    // Rehydration fragment shader with fluid, organic equations
     const fragmentShaderSource = `#version 300 es
 precision highp float;
 
@@ -423,129 +384,126 @@ uniform float u_waveformData[32];
 
 // Control uniforms
 uniform float u_intensity;
-uniform float u_rotationSpeed;
-uniform float u_colorSensitivity;
-uniform float u_beatPulse;
-uniform float u_fractalComplexity;
-uniform float u_scaleReactivity;
+uniform float u_flowSpeed;
+uniform float u_colorShift;
+uniform float u_waveAmplitude;
+uniform float u_liquidity;
+uniform float u_turbulence;
 
-// 2D rotation matrix function
-mat2 rotate2D(float angle) {
-  float s = sin(angle);
-  float c = cos(angle);
-  return mat2(c, -s, s, c);
+// Noise functions for organic patterns
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// HSV to RGB color conversion
-vec3 hsv(float h, float s, float v) {
-  vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-  vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
-  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
+vec2 hash22(vec2 p) {
+  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+  return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
 }
 
-// Get frequency data for a normalized position (0-1)
-float getFrequency(float pos) {
-  int index = int(pos * 63.0);
-  return u_frequencyData[index];
+// Improved noise for fluid motion
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  
+  return mix(mix(hash21(i + vec2(0,0)), hash21(i + vec2(1,0)), u.x),
+             mix(hash21(i + vec2(0,1)), hash21(i + vec2(1,1)), u.x), u.y);
+}
+
+// Fluid distortion function 
+vec2 fluidDistort(vec2 p, float t) {
+  float audioWave = u_bassLevel * 0.8 + u_midLevel * 0.5;
+  
+  vec2 q = vec2(noise(p + vec2(0, t * u_flowSpeed)),
+                noise(p + vec2(5.2, t * u_flowSpeed * 1.3) + audioWave));
+  
+  vec2 r = vec2(noise(p + 4.0 * q + vec2(1.7, 9.2) + t * u_flowSpeed * 0.7),
+                noise(p + 4.0 * q + vec2(8.3, 2.8) + t * u_flowSpeed * 0.4));
+  
+  return p + u_liquidity * r * (1.0 + audioWave * u_intensity);
+}
+
+// Get frequency data 
+float getFreq(float pos) {
+  int idx = int(pos * 63.0);
+  return u_frequencyData[idx];
+}
+
+// Organic color palette inspired by water and nature
+vec3 hydroColor(float t, float audio) {
+  t += u_colorShift + audio * 0.3;
+  
+  vec3 a = vec3(0.2, 0.5, 0.8);  // Deep water blue
+  vec3 b = vec3(0.3, 0.8, 0.6);  // Aqua green  
+  vec3 c = vec3(0.6, 0.9, 1.2);  // Light cyan
+  vec3 d = vec3(0.1, 0.4, 0.7);  // Dark blue base
+  
+  return a + b * cos(6.28318 * (c * t + d));
 }
 
 void main() {
-  vec2 r = u_resolution;
-  vec2 FC = gl_FragCoord.xy;
+  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
   float t = u_time;
-  vec4 o = vec4(0, 0, 0, 1);
+  vec3 col = vec3(0);
   
-  // Audio-reactive scaling
-  float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
+  // Audio-reactive scaling and movement
+  float audioScale = 1.0 + (u_audioLevel * 0.4 + u_bassLevel * 0.3) * u_intensity;
+  uv *= audioScale;
   
-  // Dynamic iteration count based on audio intensity and complexity control
-  float maxIterations = 85.0 + u_audioLevel * 14.0 * u_fractalComplexity;
-  
-  for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-    // Audio-reactive 3D transformation
-    vec3 p = vec3((FC.xy*2.-r)/r.x*audioScale, g-.5);
+  // Multi-layered fluid distortion
+  for (int i = 0; i < 4; i++) {
+    float layer = float(i);
+    vec2 p = uv * (2.0 + layer * 0.5);
     
-    // Audio-reactive rotation with multiple axes
-    float bassRotSpeed = t * (0.2 + u_bassLevel * 0.4 * u_intensity) * u_rotationSpeed;
-    float trebleRotSpeed = t * (0.15 + u_trebleLevel * 0.3 * u_intensity) * u_rotationSpeed;
+    // Apply fluid distortion with audio influence
+    p = fluidDistort(p, t + layer * 0.3);
     
-    p.xz *= rotate2D(bassRotSpeed);
-    p.yz *= rotate2D(trebleRotSpeed * 0.7);
+    // Create flowing patterns with frequency data
+    float freqInfluence = getFreq(layer * 0.25) * u_waveAmplitude;
     
-    s = 1.0;
+    // Organic wave equation with audio reactivity
+    float wave1 = sin(p.x * 3.0 + t * u_flowSpeed * 2.0 + freqInfluence * 3.0);
+    float wave2 = cos(p.y * 2.5 + t * u_flowSpeed * 1.7 + u_trebleLevel * 2.0);
+    float wave3 = sin(length(p) * 4.0 - t * u_flowSpeed * 2.5 + u_midLevel * 4.0);
     
-    // Audio-reactive folding parameters
-    vec3 foldParams = vec3(
-      3.0 + u_bassLevel * 0.8 * u_intensity,
-      9.0 + u_midLevel * 1.2 * u_intensity,
-      2.5 + u_trebleLevel * 0.6 * u_intensity
-    );
+    // Combine waves with turbulence
+    float pattern = (wave1 + wave2 + wave3) * 0.33;
+    pattern += noise(p * 6.0 + t * u_flowSpeed) * u_turbulence * 0.5;
     
-    vec3 foldOffset = vec3(
-      5.0 + u_audioLevel * 0.4 * u_intensity,
-      2.0 + getFrequency(0.3) * 0.8 * u_intensity,
-      3.0 + getFrequency(0.7) * 0.6 * u_intensity
-    ) / max(0.1, audioScale * 0.8);
+    // Audio-reactive intensity modulation
+    pattern *= 1.0 + (u_bassLevel * 0.3 + getFreq(0.1 + layer * 0.2) * 0.4) * u_intensity;
     
-    // Fractal iteration with audio-reactive parameters
-    for(int j=0; j++<16; p = foldParams - abs(abs(p)*e - foldOffset))
-      s *= e = max(1.005 + u_audioLevel * 0.002 * u_intensity, 
-                   (8.0 + u_bassLevel * 2.0 * u_intensity) / dot(p*.8, p));
+    // Create flowing color with audio influence
+    float audioColorShift = u_audioLevel * 0.2 + u_trebleLevel * 0.15;
+    vec3 layerColor = hydroColor(pattern * 0.5 + layer * 0.3 + t * 0.1, audioColorShift);
     
-    // Audio-reactive accumulation
-    g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.2 * u_intensity);
-    
-    s = log(s) / max(0.01, g);
-    
-    // Dynamic color based on frequency spectrum and audio characteristics
-    float freqPos = i / maxIterations;
-    float freqIntensity = getFrequency(freqPos);
-    
-    // Multi-layered hue calculation
-    float hue1 = -g * 0.1 + u_bassLevel * 0.15 * u_colorSensitivity;
-    float hue2 = 0.6 + u_midLevel * 0.2 * u_colorSensitivity - freqIntensity * 0.15 * u_colorSensitivity;
-    float hue3 = 0.3 + u_trebleLevel * 0.25 * u_colorSensitivity + t * 0.02;
-    
-    // Blend hues based on audio characteristics
-    float hue = mix(mix(hue1, hue2, u_midLevel * 0.6 * u_colorSensitivity), 
-                    hue3, u_trebleLevel * 0.4 * u_colorSensitivity);
-    
-    // Dynamic saturation and brightness
-    float saturation = 0.6 + u_audioLevel * 0.15 * u_colorSensitivity;
-    float brightness = s / (4200.0 - u_audioLevel * 1200.0 * u_intensity) 
-                      * (1.0 + freqIntensity * 0.4 * u_colorSensitivity);
-    
-    // Beat-reactive brightness pulses
-    float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.8 * u_beatPulse;
-    brightness *= beatPulseEffect;
-    
-    // Color accumulation with audio enhancement
-    o.rgb += hsv(hue, saturation, brightness);
+    // Blend layers with audio-reactive opacity
+    float opacity = 0.3 + getFreq(layer * 0.3) * 0.2 * u_intensity;
+    col = mix(col, layerColor, opacity * (1.0 - layer * 0.2));
   }
   
-  // Final audio-reactive enhancement
-  o.rgb *= 1.0 + u_audioLevel * 0.2 * u_intensity;
+  // Final audio enhancement and glow
+  col *= 1.0 + u_audioLevel * 0.3 * u_intensity;
   
-  // Add subtle waveform overlay
-  vec2 cornerPos = FC.xy / r;
-  if (cornerPos.x < 0.12 && cornerPos.y > 0.88) {
-    float waveIndex = cornerPos.x * 8.33;
-    int waveIdx = int(waveIndex * 31.0);
-    float waveValue = u_waveformData[waveIdx];
-    o.rgb += vec3(0.15, 0.1, 0.25) * abs(waveValue) * 2.5 * u_intensity;
+  // Add subtle waveform visualization
+  vec2 wavePos = gl_FragCoord.xy / u_resolution.xy;
+  if (wavePos.y < 0.1 && wavePos.x < 0.8) {
+    int waveIdx = int(wavePos.x * 31.0);
+    float waveVal = u_waveformData[waveIdx];
+    col += vec3(0.1, 0.3, 0.5) * abs(waveVal) * 3.0 * u_intensity;
   }
   
-  outColor = o;
+  // Soft vignette for focus
+  float vignette = 1.0 - length(uv * 0.5);
+  col *= 0.7 + 0.3 * vignette;
+  
+  outColor = vec4(col, 1.0);
 }
 `
 
-    // Create and compile shaders
     const createShader = (gl: WebGL2RenderingContext, type: number, source: string) => {
       const shader = gl.createShader(type)
-      if (!shader) {
-        console.error("Failed to create shader")
-        return null
-      }
+      if (!shader) return null
 
       gl.shaderSource(shader, source)
       gl.compileShader(shader)
@@ -559,169 +517,130 @@ void main() {
       return shader
     }
 
-    let cleanup = () => {}
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource)
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource)
 
-    try {
-      vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource)
-      fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource)
+    if (!vertexShader || !fragmentShader) return
 
-      if (!vertexShader || !fragmentShader) {
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
+    const program = gl.createProgram()
+    if (!program) return
 
-      // Create program and link shaders
-      program = gl.createProgram()
-      if (!program) {
-        console.error("Failed to create program")
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
 
-      gl.attachShader(program, vertexShader)
-      gl.attachShader(program, fragmentShader)
-      gl.linkProgram(program)
-
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error("Program linking error:", gl.getProgramInfoLog(program))
-        cleanup = () => {
-          window.removeEventListener("resize", resizeCanvas)
-        }
-        return
-      }
-
-      // Set up position buffer (full screen quad)
-      positionBuffer = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-
-      const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
-
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
-
-      // Use program
-      gl.useProgram(program)
-
-      // Set up position attribute
-      const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
-      gl.enableVertexAttribArray(positionAttributeLocation)
-      gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
-
-      // Get uniform locations
-      const resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution")
-      const timeUniformLocation = gl.getUniformLocation(program, "u_time")
-      
-      // Audio uniform locations
-      const audioLevelUniformLocation = gl.getUniformLocation(program, "u_audioLevel")
-      const bassLevelUniformLocation = gl.getUniformLocation(program, "u_bassLevel")
-      const midLevelUniformLocation = gl.getUniformLocation(program, "u_midLevel")
-      const trebleLevelUniformLocation = gl.getUniformLocation(program, "u_trebleLevel")
-      const frequencyDataUniformLocation = gl.getUniformLocation(program, "u_frequencyData")
-      const waveformDataUniformLocation = gl.getUniformLocation(program, "u_waveformData")
-      
-      // Control uniform locations
-      const intensityUniformLocation = gl.getUniformLocation(program, "u_intensity")
-      const rotationSpeedUniformLocation = gl.getUniformLocation(program, "u_rotationSpeed")
-      const colorSensitivityUniformLocation = gl.getUniformLocation(program, "u_colorSensitivity")
-      const beatPulseUniformLocation = gl.getUniformLocation(program, "u_beatPulse")
-      const fractalComplexityUniformLocation = gl.getUniformLocation(program, "u_fractalComplexity")
-      const scaleReactivityUniformLocation = gl.getUniformLocation(program, "u_scaleReactivity")
-
-      // Automatic rotation variables
-      let currentRotationX = 0
-      let currentRotationY = 0.5
-
-      // Render loop
-      const startTime = Date.now()
-
-      const render = () => {
-        if (!gl || !program) return
-
-        const currentTime = Date.now()
-        const deltaTime = (currentTime - startTime) / 1000
-
-        // Get current audio data
-        const audioData = analyzeAudio()
-
-        // Update time uniform
-        gl.uniform1f(timeUniformLocation, deltaTime)
-
-        // Update resolution uniform
-        gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height)
-
-        // Update audio uniforms
-        if (audioLevelUniformLocation) {
-          gl.uniform1f(audioLevelUniformLocation, audioData.level)
-        }
-        if (bassLevelUniformLocation) {
-          gl.uniform1f(bassLevelUniformLocation, audioData.bassLevel)
-        }
-        if (midLevelUniformLocation) {
-          gl.uniform1f(midLevelUniformLocation, audioData.midLevel)
-        }
-        if (trebleLevelUniformLocation) {
-          gl.uniform1f(trebleLevelUniformLocation, audioData.trebleLevel)
-        }
-        if (frequencyDataUniformLocation) {
-          gl.uniform1fv(frequencyDataUniformLocation, audioData.frequencyData)
-        }
-        if (waveformDataUniformLocation) {
-          gl.uniform1fv(waveformDataUniformLocation, audioData.waveformData)
-        }
-
-        // Update control uniforms
-        if (intensityUniformLocation) {
-          gl.uniform1f(intensityUniformLocation, intensity)
-        }
-        if (rotationSpeedUniformLocation) {
-          gl.uniform1f(rotationSpeedUniformLocation, rotationSpeed)
-        }
-        if (colorSensitivityUniformLocation) {
-          gl.uniform1f(colorSensitivityUniformLocation, colorSensitivity)
-        }
-        if (beatPulseUniformLocation) {
-          gl.uniform1f(beatPulseUniformLocation, beatPulse)
-        }
-        if (fractalComplexityUniformLocation) {
-          gl.uniform1f(fractalComplexityUniformLocation, fractalComplexity)
-        }
-        if (scaleReactivityUniformLocation) {
-          gl.uniform1f(scaleReactivityUniformLocation, scaleReactivity)
-        }
-
-        // Clear canvas and draw
-        gl.clearColor(0, 0, 0, 1)
-        gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-
-        requestAnimationFrame(render)
-      }
-
-      render()
-
-      // Cleanup
-      cleanup = () => {
-        window.removeEventListener("resize", resizeCanvas)
-
-        if (program) gl.deleteProgram(program)
-        if (vertexShader) gl.deleteShader(vertexShader)
-        if (fragmentShader) gl.deleteShader(fragmentShader)
-        if (positionBuffer) gl.deleteBuffer(positionBuffer)
-      }
-    } catch (error) {
-      console.error("Error during WebGL initialization or rendering:", error)
-      cleanup = () => {
-        window.removeEventListener("resize", resizeCanvas)
-      }
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error("Program linking error:", gl.getProgramInfoLog(program))
+      return
     }
+
+    programRef.current = program
+
+    const positionBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+    const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+
+    const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
+    gl.enableVertexAttribArray(positionAttributeLocation)
+    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
+
+    // Get uniform locations
+    resolutionUniformLocationRef.current = gl.getUniformLocation(program, "u_resolution")
+    timeUniformLocationRef.current = gl.getUniformLocation(program, "u_time")
+    audioLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_audioLevel")
+    bassLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_bassLevel")
+    midLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_midLevel")
+    trebleLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_trebleLevel")
+    frequencyDataUniformLocationRef.current = gl.getUniformLocation(program, "u_frequencyData")
+    waveformDataUniformLocationRef.current = gl.getUniformLocation(program, "u_waveformData")
+    
+    intensityUniformLocationRef.current = gl.getUniformLocation(program, "u_intensity")
+    flowSpeedUniformLocationRef.current = gl.getUniformLocation(program, "u_flowSpeed")
+    colorShiftUniformLocationRef.current = gl.getUniformLocation(program, "u_colorShift")
+    waveAmplitudeUniformLocationRef.current = gl.getUniformLocation(program, "u_waveAmplitude")
+    liquidityUniformLocationRef.current = gl.getUniformLocation(program, "u_liquidity")
+    turbulenceUniformLocationRef.current = gl.getUniformLocation(program, "u_turbulence")
+
+    const startTime = performance.now()
+
+    const render = () => {
+      if (!programRef.current || !gl) return
+      gl.useProgram(programRef.current)
+
+      const audioData = analyzeAudio()
+      const currentTime = (performance.now() - startTime) / 1000
+
+      // Update uniforms
+      if (timeUniformLocationRef.current) {
+        gl.uniform1f(timeUniformLocationRef.current, currentTime)
+      }
+      if (resolutionUniformLocationRef.current) {
+        gl.uniform2f(resolutionUniformLocationRef.current, canvas.width, canvas.height)
+      }
+
+      // Audio uniforms
+      if (audioLevelUniformLocationRef.current) {
+        gl.uniform1f(audioLevelUniformLocationRef.current, audioData.level)
+      }
+      if (bassLevelUniformLocationRef.current) {
+        gl.uniform1f(bassLevelUniformLocationRef.current, audioData.bassLevel)
+      }
+      if (midLevelUniformLocationRef.current) {
+        gl.uniform1f(midLevelUniformLocationRef.current, audioData.midLevel)
+      }
+      if (trebleLevelUniformLocationRef.current) {
+        gl.uniform1f(trebleLevelUniformLocationRef.current, audioData.trebleLevel)
+      }
+      if (frequencyDataUniformLocationRef.current) {
+        gl.uniform1fv(frequencyDataUniformLocationRef.current, audioData.frequencyData)
+      }
+      if (waveformDataUniformLocationRef.current) {
+        gl.uniform1fv(waveformDataUniformLocationRef.current, audioData.waveformData)
+      }
+
+      // Control uniforms
+      if (intensityUniformLocationRef.current) {
+        gl.uniform1f(intensityUniformLocationRef.current, intensity)
+      }
+      if (flowSpeedUniformLocationRef.current) {
+        gl.uniform1f(flowSpeedUniformLocationRef.current, flowSpeed)
+      }
+      if (colorShiftUniformLocationRef.current) {
+        gl.uniform1f(colorShiftUniformLocationRef.current, colorShift)
+      }
+      if (waveAmplitudeUniformLocationRef.current) {
+        gl.uniform1f(waveAmplitudeUniformLocationRef.current, waveAmplitude)
+      }
+      if (liquidityUniformLocationRef.current) {
+        gl.uniform1f(liquidityUniformLocationRef.current, liquidity)
+      }
+      if (turbulenceUniformLocationRef.current) {
+        gl.uniform1f(turbulenceUniformLocationRef.current, turbulence)
+      }
+
+      gl.clearColor(0, 0, 0, 1)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+
+      animationRef.current = requestAnimationFrame(render)
+    }
+
+    render()
 
     return () => {
-      cleanup()
+      window.removeEventListener("resize", resizeCanvas)
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      if (program) {
+        gl.deleteProgram(program)
+      }
+      gl.deleteShader(vertexShader)
+      gl.deleteShader(fragmentShader)
+      gl.deleteBuffer(positionBuffer)
     }
-  }, [analyzeAudio, intensity, rotationSpeed, colorSensitivity, beatPulse, fractalComplexity, scaleReactivity])
+  }, [analyzeAudio, intensity, flowSpeed, colorShift, waveAmplitude, liquidity, turbulence])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -757,24 +676,29 @@ void main() {
         }}
       />
 
-      {/* Audio Controls */}
+      {/* Audio Controls with hydration theme */}
       <div
         style={{
           position: "absolute",
           top: "20px",
           left: "20px",
-          background: "rgba(0, 0, 0, 0.8)",
-          borderRadius: "10px",
-          padding: "15px",
-          color: "white",
+          background: "rgba(0, 20, 40, 0.85)",
+          borderRadius: "12px",
+          padding: "18px",
+          color: "#E0F7FF",
           fontFamily: "sans-serif",
           fontSize: "14px",
-          minWidth: "300px",
+          minWidth: "320px",
           zIndex: 10,
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)"
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(100, 200, 255, 0.2)",
+          boxShadow: "0 8px 32px rgba(0, 100, 200, 0.1)"
         }}
       >
+        <div style={{ marginBottom: "12px", fontSize: "16px", fontWeight: "bold", color: "#7DD3FC" }}>
+          🌊 Rehydration
+        </div>
+
         {/* File Upload */}
         <div style={{ marginBottom: "15px" }}>
           <label style={{ display: "block", marginBottom: "8px", fontSize: "12px", opacity: 0.8 }}>
@@ -787,14 +711,14 @@ void main() {
             style={{
               width: "100%",
               padding: "8px",
-              background: "rgba(255, 255, 255, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              borderRadius: "5px",
-              color: "white",
+              background: "rgba(100, 200, 255, 0.1)",
+              border: "1px solid rgba(100, 200, 255, 0.3)",
+              borderRadius: "6px",
+              color: "#E0F7FF",
               fontSize: "12px"
             }}
           />
-      </div>
+        </div>
 
         {/* Default Songs */}
         <div style={{ marginBottom: "15px" }}>
@@ -806,23 +730,25 @@ void main() {
               <button
                 key={index}
                 onClick={() => loadDefaultSong(song.filename, song.displayName)}
-        style={{
+                style={{
                   width: "100%",
                   padding: "8px",
-                  background: "rgba(255, 255, 255, 0.1)",
-                  border: "1px solid rgba(255, 255, 255, 0.3)",
-          borderRadius: "5px",
-                  color: "white",
+                  background: "rgba(100, 200, 255, 0.1)",
+                  border: "1px solid rgba(100, 200, 255, 0.3)",
+                  borderRadius: "6px",
+                  color: "#E0F7FF",
                   fontSize: "12px",
                   textAlign: "left",
                   cursor: "pointer",
-                  transition: "background-color 0.2s"
+                  transition: "all 0.2s"
                 }}
                 onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.background = "rgba(255, 255, 255, 0.2)"
+                  (e.target as HTMLButtonElement).style.background = "rgba(100, 200, 255, 0.2)"
+                  ;(e.target as HTMLButtonElement).style.borderColor = "rgba(100, 200, 255, 0.5)"
                 }}
                 onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.background = "rgba(255, 255, 255, 0.1)"
+                  (e.target as HTMLButtonElement).style.background = "rgba(100, 200, 255, 0.1)"
+                  ;(e.target as HTMLButtonElement).style.borderColor = "rgba(100, 200, 255, 0.3)"
                 }}
               >
                 {song.displayName}
@@ -833,9 +759,9 @@ void main() {
 
         {/* Track Info */}
         {trackName && (
-          <div style={{ marginBottom: "15px", fontSize: "13px", fontWeight: "bold" }}>
+          <div style={{ marginBottom: "15px", fontSize: "13px", fontWeight: "bold", color: "#7DD3FC" }}>
             {trackName}
-      </div>
+          </div>
         )}
 
         {/* Play/Pause Button */}
@@ -843,16 +769,17 @@ void main() {
           <button
             onClick={togglePlayPause}
             disabled={!audioElementRef.current}
-        style={{
-              padding: "10px 20px",
-              background: isPlaying ? "#ff4444" : "#44ff44",
+            style={{
+              padding: "12px 24px",
+              background: isPlaying ? "linear-gradient(45deg, #FF6B6B, #FF8E8E)" : "linear-gradient(45deg, #4ECDC4, #7DD3FC)",
               border: "none",
-              borderRadius: "20px",
+              borderRadius: "25px",
               color: "white",
               fontWeight: "bold",
               cursor: "pointer",
               fontSize: "14px",
-              opacity: !audioElementRef.current ? 0.5 : 1
+              opacity: !audioElementRef.current ? 0.5 : 1,
+              boxShadow: "0 4px 15px rgba(100, 200, 255, 0.3)"
             }}
           >
             {isPlaying ? "⏸ Pause" : "▶ Play"}
@@ -875,7 +802,7 @@ void main() {
               style={{
                 width: "100%",
                 height: "4px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
@@ -897,7 +824,7 @@ void main() {
             style={{
               width: "100%",
               height: "4px",
-              background: "rgba(255, 255, 255, 0.3)",
+              background: "rgba(100, 200, 255, 0.3)",
               outline: "none",
               borderRadius: "2px"
             }}
@@ -905,9 +832,9 @@ void main() {
         </div>
 
         {/* Visual Controls */}
-        <div style={{ marginBottom: "15px", borderTop: "1px solid rgba(255, 255, 255, 0.2)", paddingTop: "15px" }}>
+        <div style={{ marginBottom: "15px", borderTop: "1px solid rgba(100, 200, 255, 0.2)", paddingTop: "15px" }}>
           <div style={{ marginBottom: "8px", fontSize: "13px", fontWeight: "bold", opacity: 0.9 }}>
-            Visual Controls
+            Fluid Controls
           </div>
 
           {/* Intensity */}
@@ -924,112 +851,112 @@ void main() {
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
             />
           </div>
 
-          {/* Rotation Speed */}
+          {/* Flow Speed */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Rotation Speed: {Math.round(rotationSpeed * 100)}%
+              Flow Speed: {Math.round(flowSpeed * 100)}%
             </label>
             <input
               type="range"
               min="0"
               max="200"
-              value={rotationSpeed * 100}
-              onChange={(e) => setRotationSpeed(parseFloat(e.target.value) / 100)}
+              value={flowSpeed * 100}
+              onChange={(e) => setFlowSpeed(parseFloat(e.target.value) / 100)}
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
             />
           </div>
 
-          {/* Color Sensitivity */}
+          {/* Color Shift */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Color Sensitivity: {Math.round(colorSensitivity * 100)}%
+              Color Shift: {Math.round(colorShift * 100)}%
             </label>
             <input
               type="range"
               min="0"
-              max="200"
-              value={colorSensitivity * 100}
-              onChange={(e) => setColorSensitivity(parseFloat(e.target.value) / 100)}
+              max="100"
+              value={colorShift * 100}
+              onChange={(e) => setColorShift(parseFloat(e.target.value) / 100)}
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
             />
           </div>
 
-          {/* Beat Pulse */}
+          {/* Wave Amplitude */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Beat Pulse: {Math.round(beatPulse * 100)}%
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="200"
-              value={beatPulse * 100}
-              onChange={(e) => setBeatPulse(parseFloat(e.target.value) / 100)}
-              style={{
-                width: "100%",
-                height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
-                outline: "none",
-                borderRadius: "2px"
-              }}
-            />
-          </div>
-
-          {/* Fractal Complexity */}
-          <div style={{ marginBottom: "10px" }}>
-            <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Fractal Complexity: {Math.round(fractalComplexity * 100)}%
+              Wave Amplitude: {Math.round(waveAmplitude * 100)}%
             </label>
             <input
               type="range"
               min="0"
               max="150"
-              value={fractalComplexity * 100}
-              onChange={(e) => setFractalComplexity(parseFloat(e.target.value) / 100)}
+              value={waveAmplitude * 100}
+              onChange={(e) => setWaveAmplitude(parseFloat(e.target.value) / 100)}
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
             />
           </div>
 
-          {/* Scale Reactivity */}
+          {/* Liquidity */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
-              Scale Reactivity: {Math.round(scaleReactivity * 100)}%
+              Liquidity: {Math.round(liquidity * 100)}%
             </label>
             <input
               type="range"
               min="0"
-              max="200"
-              value={scaleReactivity * 100}
-              onChange={(e) => setScaleReactivity(parseFloat(e.target.value) / 100)}
+              max="150"
+              value={liquidity * 100}
+              onChange={(e) => setLiquidity(parseFloat(e.target.value) / 100)}
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
+                outline: "none",
+                borderRadius: "2px"
+              }}
+            />
+          </div>
+
+          {/* Turbulence */}
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ display: "block", marginBottom: "3px", fontSize: "11px", opacity: 0.8 }}>
+              Turbulence: {Math.round(turbulence * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={turbulence * 100}
+              onChange={(e) => setTurbulence(parseFloat(e.target.value) / 100)}
+              style={{
+                width: "100%",
+                height: "3px",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
@@ -1050,7 +977,7 @@ void main() {
               style={{
                 width: "100%",
                 height: "3px",
-                background: "rgba(255, 255, 255, 0.3)",
+                background: "rgba(100, 200, 255, 0.3)",
                 outline: "none",
                 borderRadius: "2px"
               }}
@@ -1061,32 +988,32 @@ void main() {
           <div style={{ textAlign: "center", marginTop: "10px" }}>
             <button
               onClick={() => {
-                setIntensity(0.5)
-                setRotationSpeed(0.5)
-                setColorSensitivity(0.5)
-                setBeatPulse(0.5)
-                setFractalComplexity(0.5)
-                setSmoothing(0.85)
-                setScaleReactivity(0.5)
+                setIntensity(0.6)
+                setFlowSpeed(0.4)
+                setColorShift(0.3)
+                setWaveAmplitude(0.5)
+                setLiquidity(0.7)
+                setTurbulence(0.4)
+                setSmoothing(0.8)
               }}
               style={{
-                padding: "6px 12px",
-                background: "rgba(255, 255, 255, 0.2)",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
-                borderRadius: "4px",
-                color: "white",
+                padding: "8px 16px",
+                background: "rgba(100, 200, 255, 0.2)",
+                border: "1px solid rgba(100, 200, 255, 0.4)",
+                borderRadius: "6px",
+                color: "#E0F7FF",
                 fontSize: "11px",
                 cursor: "pointer"
               }}
             >
-              Reset Controls
+              Reset Fluid Controls
             </button>
           </div>
         </div>
 
         {/* Audio Levels Display */}
         {isPlaying && (
-          <div style={{ fontSize: "10px", opacity: 0.7 }}>
+          <div style={{ fontSize: "10px", opacity: 0.7, color: "#7DD3FC" }}>
             <div>Level: {Math.round(smoothedAudioDataRef.current.level * 100)}%</div>
             <div>Bass: {Math.round(smoothedAudioDataRef.current.bassLevel * 100)}%</div>
             <div>Mid: {Math.round(smoothedAudioDataRef.current.midLevel * 100)}%</div>
@@ -1100,27 +1027,26 @@ void main() {
         <div
           style={{
             position: "absolute",
-          top: 0,
-          left: 0,
+            top: 0,
+            left: 0,
             width: "100%",
             height: "100%",
-            background: "rgba(0, 100, 255, 0.2)",
+            background: "rgba(100, 200, 255, 0.15)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 20,
             fontSize: "24px",
-            color: "white",
+            color: "#7DD3FC",
             fontFamily: "sans-serif",
             fontWeight: "bold"
           }}
         >
-          Drop audio file here
+          🌊 Drop audio file to rehydrate
         </div>
       )}
     </div>
   )
 }
 
-export default TweetGLSLVisualization
-
+export default RehydrationGLSLVisualization 
