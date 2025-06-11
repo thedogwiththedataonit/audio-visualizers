@@ -463,7 +463,7 @@ void main() {
   
   for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
     // Audio-reactive 3D transformation
-    vec3 p = vec3((FC.xy*2.-r)/r.x+vec2(0,.9)*audioScale, g-.5);
+    vec3 p = vec3((FC.xy*2.-r)/r.x*audioScale, g-.5);
     
     // Audio-reactive rotation with multiple axes
     float bassRotSpeed = t * (0.2 + u_bassLevel * 0.4 * u_intensity) * u_rotationSpeed;
