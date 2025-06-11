@@ -11,7 +11,7 @@ interface AudioData {
   waveformData: Float32Array
 }
 
-export default function SpaceshipGLSLVisualization() {
+export default function CommandoGLSLVisualization() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -51,7 +51,7 @@ export default function SpaceshipGLSLVisualization() {
   const [rotationSpeed, setRotationSpeed] = useState(0.5)
   const [colorSensitivity, setColorSensitivity] = useState(0.5)
   const [beatPulse, setBeatPulse] = useState(0.5)
-  const [fractalComplexity, setFractalComplexity] = useState(0.6)
+  const [fractalComplexity, setFractalComplexity] = useState(0.5)
   const [smoothing, setSmoothing] = useState(0.85)
   const [scaleReactivity, setScaleReactivity] = useState(0.5)
 
@@ -430,30 +430,55 @@ export default function SpaceshipGLSLVisualization() {
      float maxIterations = 35.0 + u_audioLevel * 8.0 * u_fractalComplexity;
     
     for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-      // Audio-reactive 3D transformation
-      vec3 p = vec3((FC.xy - 0.5 * r) / r.y * 1.5 * audioScale, g - 0.6);
+      // Audio-reactive frequency-based offset for subtle variations
+      float freqOffset = getFrequency(i / maxIterations) * 0.1 * u_intensity;
       
-             // Audio-reactive rotation speed
-       float rotSpeed = t * (0.4 + (u_bassLevel * 0.2 + u_midLevel * 0.1) * u_intensity) * u_rotationSpeed;
+      // Create stable z position without downward drift
+      float stableZ = sin(t * 0.3 + u_bassLevel * 2.0) * 0.2 * u_intensity;
+      
+      // Audio-reactive 3D transformation with fixed z-component
+      vec3 p = vec3((FC.xy - 0.5 * r) / r.y * 1.5 * audioScale, stableZ + freqOffset);
+      
+      // Add subtle waveform-based position distortion
+      float waveIndex = mod(i * 0.1, 1.0);
+      int waveIdx = int(waveIndex * 31.0);
+      float waveInfluence = u_waveformData[waveIdx] * 0.05 * u_intensity;
+      p.xy += vec2(sin(waveInfluence * 10.0), cos(waveInfluence * 10.0)) * waveInfluence;
+      
+             // Audio-reactive rotation speed with subtle frequency variations
+       float rotSpeed = t * (0.4 + (u_bassLevel * 0.3 + u_midLevel * 0.1) * u_intensity + freqOffset * 0.5) * u_rotationSpeed;
        p.yz *= mat2(cos(rotSpeed), sin(rotSpeed), -sin(rotSpeed), cos(rotSpeed));
        
-       // Additional rotation on x-axis based on treble
-       float trebleRot = t * u_trebleLevel * 0.4 * u_rotationSpeed * u_intensity;
+       // Additional rotation on x-axis based on treble with mid-frequency modulation
+       float trebleRot = t * (u_trebleLevel * 0.4 + u_midLevel * 0.1) * u_rotationSpeed * u_intensity;
        p.xz *= mat2(cos(trebleRot), sin(trebleRot), -sin(trebleRot), cos(trebleRot));
+       
+       // Add gentle breathing motion based on low frequencies
+       float breathe = sin(t * 0.8 + u_bassLevel * 3.14159) * u_bassLevel * 0.1 * u_intensity;
+       p *= 1.0 + breathe;
       
       s = 1.0;
       
-             // Audio-reactive folding parameters
-       vec3 foldParams = vec3(3.0 + u_bassLevel * 0.5 * u_intensity, 4.5 + u_midLevel * 0.8 * u_intensity, 1.0 + u_trebleLevel * 0.3 * u_intensity);
-       vec3 foldOffset = vec3(4.0 + u_audioLevel * 0.3 * u_intensity, 2.0 + getFrequency(0.2) * 0.5 * u_intensity, 2.0 + getFrequency(0.8) * 0.5 * u_intensity);
+             // Enhanced audio-reactive folding parameters with frequency spectrum influence
+       vec3 foldParams = vec3(
+         3.0 + u_bassLevel * 0.5 * u_intensity + getFrequency(0.1) * 0.2 * u_intensity,
+         4.5 + u_midLevel * 0.8 * u_intensity + getFrequency(0.5) * 0.3 * u_intensity,
+         1.0 + u_trebleLevel * 0.3 * u_intensity + getFrequency(0.9) * 0.15 * u_intensity
+       );
+       
+       vec3 foldOffset = vec3(
+         4.0 + u_audioLevel * 0.3 * u_intensity + sin(t * 0.5) * u_bassLevel * 0.2 * u_intensity,
+         2.0 + getFrequency(0.2) * 0.5 * u_intensity + cos(t * 0.7) * u_midLevel * 0.15 * u_intensity,
+         2.0 + getFrequency(0.8) * 0.5 * u_intensity + sin(t * 1.1) * u_trebleLevel * 0.1 * u_intensity
+       );
       
       for(int i = 0; i++ < 14; p = foldParams - abs(abs(p) * e - foldOffset))
         s *= e = max(1.01, 8.0 / dot(p, p));
       
-             // Audio-reactive geometric accumulation
-       g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.15 * u_intensity);
+             // Stabilized audio-reactive geometric accumulation
+       g += mod(length(p.zx), abs(p.y) + 0.1) / s * (1.0 + u_audioLevel * 0.15 * u_intensity);
       
-      s = log(s) / g;
+      s = log(s) / max(g, 0.001);
       
       // Dynamic color based on frequency spectrum
       float freqPos = i / maxIterations;
@@ -480,6 +505,15 @@ export default function SpaceshipGLSLVisualization() {
     
          // Final audio-reactive enhancement
      o.rgb *= 1.0 + u_audioLevel * 0.15 * u_intensity;
+    
+    // Center dimming effect to reduce brightness in the middle
+    vec2 centerPos = (FC.xy - 0.5 * r) / r.y;
+    float distanceFromCenter = length(centerPos);
+    float centerDimming = smoothstep(0.0, 0.8, distanceFromCenter);
+    centerDimming = mix(0.1, 1.0, centerDimming); // Dim center to 10% of original brightness
+    
+    // Apply center dimming
+    o.rgb *= centerDimming;
     
     // Add subtle waveform overlay in corners
     vec2 cornerPos = FC.xy / r;

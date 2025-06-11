@@ -11,7 +11,16 @@ interface AudioData {
   waveformData: Float32Array
 }
 
-export default function SpaceshipGLSLVisualization() {
+/**
+ * TweetGLSLVisualization Component
+ *
+ * A React component that renders a WebGL visualization based on the つぶやきGLSL code
+ * by Yohei Nishitsuji (https://x.com/YoheiNishitsuji/status/1898687974914904342)
+ *
+ * The visualization uses ray marching techniques to render a 3D Mandelbox-like fractal
+ * with audio-reactive controls and comprehensive visual settings.
+ */
+const TweetGLSLVisualization: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -372,126 +381,127 @@ export default function SpaceshipGLSLVisualization() {
 
     // Vertex shader source
     const vertexShaderSource = `#version 300 es
-      precision highp float;
-      in vec4 a_position;
-      void main() {
-        gl_Position = a_position;
-      }
+    precision highp float;
+    in vec4 a_position;
+    void main() {
+      gl_Position = a_position;
+    }
     `
 
     // Enhanced fragment shader with audio reactivity
     const fragmentShaderSource = `#version 300 es
-  precision highp float;
-  out vec4 outColor;
+precision highp float;
+out vec4 outColor;
+
+// Standard uniforms
+uniform vec2 u_resolution;
+uniform float u_time;
+
+// Audio uniforms
+uniform float u_audioLevel;
+uniform float u_bassLevel;
+uniform float u_midLevel;
+uniform float u_trebleLevel;
+uniform float u_frequencyData[64];
+uniform float u_waveformData[32];
+
+// Control uniforms
+uniform float u_intensity;
+uniform float u_rotationSpeed;
+uniform float u_colorSensitivity;
+uniform float u_beatPulse;
+uniform float u_fractalComplexity;
+uniform float u_scaleReactivity;
+
+// 2D rotation matrix function
+mat2 rotate2D(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+  return mat2(c, -s, s, c);
+}
+
+// HSV to RGB color conversion
+vec3 hsv(float h, float s, float v) {
+  vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+  vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
+  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
+}
+
+// Get frequency data for a normalized position (0-1)
+float getFrequency(float pos) {
+  int index = int(pos * 63.0);
+  return u_frequencyData[index];
+}
+
+void main() {
+  vec2 r = u_resolution;
+  vec2 FC = gl_FragCoord.xy;
+  float t = u_time;
+  vec4 o = vec4(0, 0, 0, 1);
   
-  // Standard uniforms
-  uniform vec2 u_resolution;
-  uniform float u_time;
+  // Audio-reactive scaling - use audio level instead of static breathing
+  float audioScale = 1.0 + (u_audioLevel * 1.2 + u_bassLevel * 0.8) * u_scaleReactivity * u_intensity;
   
-     // Audio uniforms
-   uniform float u_audioLevel;
-   uniform float u_bassLevel;
-   uniform float u_midLevel;
-   uniform float u_trebleLevel;
-   uniform float u_frequencyData[64];
-   uniform float u_waveformData[32];
-   
-   // Control uniforms
-   uniform float u_intensity;
-   uniform float u_rotationSpeed;
-   uniform float u_colorSensitivity;
-   uniform float u_beatPulse;
-   uniform float u_fractalComplexity;
-   uniform float u_scaleReactivity;
+  // Dynamic iteration count based on audio intensity
+  float maxIterations = 35.0 + u_audioLevel * 15.0 * u_fractalComplexity;
   
-  // HSV to RGB color conversion
-  vec3 hsv(float h, float s, float v) {
-    vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
-    return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
-  }
-  
-  // Get frequency data for a normalized position (0-1)
-  float getFrequency(float pos) {
-    int index = int(pos * 63.0);
-    return u_frequencyData[index];
-  }
-  
-  void main() {
-    vec2 r = u_resolution;
-    vec2 FC = gl_FragCoord.xy;
-    float t = u_time;
-    vec4 o = vec4(0, 0, 0, 1);
+      for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
+      // Audio-reactive 3D transformation with the original offset
+      vec3 p = vec3((FC.xy*1.9-r)/r.x+vec2(0,.2), (g-.5) * audioScale);
     
-         // Audio-reactive scaling - use audio level instead of static breathing
-     float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
+    // Audio-reactive rotation based on original algorithm
+    float rotSpeed = t * (0.2 + (u_bassLevel * 0.4 + u_midLevel * 0.2) * u_intensity) * u_rotationSpeed;
+    p.xz *= rotate2D(rotSpeed);
+    
+    // Additional rotation on y-axis based on treble
+    float trebleRot = t * u_trebleLevel * 0.8 * u_rotationSpeed * u_intensity;
+    p.yz *= rotate2D(trebleRot);
+    
+    s = 1.0;
+    
+    // Audio-reactive folding parameters (keeping original structure)
+    vec3 foldBase = vec3(3, 9, 2.5) + vec3(u_bassLevel * 0.8, u_midLevel * 1.2, u_trebleLevel * 0.6) * u_intensity;
+    vec3 foldScale = vec3(5, 2, 3) + vec3(u_audioLevel * 0.4, getFrequency(0.3) * 0.5, getFrequency(0.7) * 0.4) * u_intensity;
+    
+    // Original fractal folding with audio enhancements
+    for(int j=0; j++<16; p = foldBase - abs(abs(p)*e - foldScale/e))
+      s *= e = max(1.005, (10.0 + u_audioLevel * 6.0 * u_intensity) / dot(p*0.8, p));
+    
+    // Audio-reactive geometric accumulation (preserving original pattern)
+    g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.4 * u_intensity);
+    
+    s = log(s) / g;
+    
+    // Dynamic color based on frequency spectrum and original algorithm
+    float freqPos = i / maxIterations;
+    float freqIntensity = getFrequency(freqPos);
+    
+         // Multi-layered color mapping based on original but with audio - blue theme
+     float hue = 0.67 + (-g * 0.1) + u_bassLevel * 0.1 * u_colorSensitivity + u_trebleLevel * 0.05 * u_colorSensitivity;
+     float saturation = 0.8 + (-p.y * 0.1) + u_midLevel * 0.1 * u_colorSensitivity;
+     float brightness = s / (5e3 - u_audioLevel * 1e3 * u_intensity) * (1.0 + freqIntensity * 0.2 * u_colorSensitivity);
+    
+         // Beat-reactive brightness pulses
+     float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.8 * u_beatPulse;
+     brightness *= beatPulseEffect;
      
-     // Dynamic iteration count based on audio intensity
-     float maxIterations = 35.0 + u_audioLevel * 8.0 * u_fractalComplexity;
-    
-    for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-      // Audio-reactive 3D transformation
-      vec3 p = vec3((FC.xy - 0.5 * r) / r.y * 1.5 * audioScale, g - 0.6);
-      
-             // Audio-reactive rotation speed
-       float rotSpeed = t * (0.4 + (u_bassLevel * 0.2 + u_midLevel * 0.1) * u_intensity) * u_rotationSpeed;
-       p.yz *= mat2(cos(rotSpeed), sin(rotSpeed), -sin(rotSpeed), cos(rotSpeed));
-       
-       // Additional rotation on x-axis based on treble
-       float trebleRot = t * u_trebleLevel * 0.4 * u_rotationSpeed * u_intensity;
-       p.xz *= mat2(cos(trebleRot), sin(trebleRot), -sin(trebleRot), cos(trebleRot));
-      
-      s = 1.0;
-      
-             // Audio-reactive folding parameters
-       vec3 foldParams = vec3(3.0 + u_bassLevel * 0.5 * u_intensity, 4.5 + u_midLevel * 0.8 * u_intensity, 1.0 + u_trebleLevel * 0.3 * u_intensity);
-       vec3 foldOffset = vec3(4.0 + u_audioLevel * 0.3 * u_intensity, 2.0 + getFrequency(0.2) * 0.5 * u_intensity, 2.0 + getFrequency(0.8) * 0.5 * u_intensity);
-      
-      for(int i = 0; i++ < 14; p = foldParams - abs(abs(p) * e - foldOffset))
-        s *= e = max(1.01, 8.0 / dot(p, p));
-      
-             // Audio-reactive geometric accumulation
-       g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.15 * u_intensity);
-      
-      s = log(s) / g;
-      
-      // Dynamic color based on frequency spectrum
-      float freqPos = i / maxIterations;
-      float freqIntensity = getFrequency(freqPos);
-      
-             // Multi-layered color mapping
-       float hue1 = 0.6 - p.z * 0.1 + u_bassLevel * 0.1 * u_colorSensitivity;           // Base hue shift
-       float hue2 = 0.8 + u_midLevel * 0.15 * u_colorSensitivity - freqIntensity * 0.1 * u_colorSensitivity;  // Mid-frequency hue
-       float hue3 = 0.2 + u_trebleLevel * 0.2 * u_colorSensitivity;                     // Treble hue
-       
-       // Blend hues based on audio characteristics
-       float hue = mix(mix(hue1, hue2, u_midLevel * 0.5 * u_colorSensitivity), hue3, u_trebleLevel * 0.3 * u_colorSensitivity);
-       
-       // Dynamic saturation and brightness
-       float saturation = 0.7 + u_audioLevel * 0.1 * u_colorSensitivity;
-       float brightness = s / (3500.0 - u_audioLevel * 800.0 * u_intensity) * (1.0 + freqIntensity * 0.3 * u_colorSensitivity);
-       
-       // Beat-reactive brightness pulses
-       float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.5 * u_beatPulse;
-       brightness *= beatPulseEffect;
-      
-      o.rgb += hsv(hue, saturation, brightness);
-    }
-    
-         // Final audio-reactive enhancement
-     o.rgb *= 1.0 + u_audioLevel * 0.15 * u_intensity;
-    
-    // Add subtle waveform overlay in corners
-    vec2 cornerPos = FC.xy / r;
-    if (cornerPos.x < 0.1 && cornerPos.y > 0.9) {
-      float waveIndex = cornerPos.x * 10.0;
-      int waveIdx = int(waveIndex * 31.0);
-      float waveValue = u_waveformData[waveIdx];
-      o.rgb += vec3(0.1, 0.1, 0.2) * abs(waveValue) * 2.0;
-    }
-    
-    outColor = o;
+     o.rgb += hsv(hue, saturation, brightness);
+   }
+   
+   // Final audio-reactive enhancement
+   o.rgb *= 1.0 + u_audioLevel * 0.3 * u_intensity;
+  
+  // Add subtle waveform overlay in corner
+  vec2 cornerPos = FC.xy / r;
+  if (cornerPos.x < 0.08 && cornerPos.y > 0.92) {
+    float waveIndex = cornerPos.x * 12.5;
+    int waveIdx = int(waveIndex * 31.0);
+    float waveValue = u_waveformData[waveIdx];
+    o.rgb += vec3(0.08, 0.08, 0.15) * abs(waveValue) * 1.5;
   }
+  
+  outColor = o;
+}
 `
 
     // Create and compile shaders
@@ -518,36 +528,36 @@ export default function SpaceshipGLSLVisualization() {
 
     if (!vertexShader || !fragmentShader) return
 
-    // Create program and link shaders
+      // Create program and link shaders
     const program = gl.createProgram()
-    if (!program) {
-      console.error("Failed to create program")
-      return
-    }
+      if (!program) {
+        console.error("Failed to create program")
+        return
+      }
 
-    gl.attachShader(program, vertexShader)
-    gl.attachShader(program, fragmentShader)
-    gl.linkProgram(program)
+      gl.attachShader(program, vertexShader)
+      gl.attachShader(program, fragmentShader)
+      gl.linkProgram(program)
 
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program linking error:", gl.getProgramInfoLog(program))
-      return
-    }
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Program linking error:", gl.getProgramInfoLog(program))
+        return
+      }
 
     programRef.current = program
 
     // Set up vertex buffer with a full-screen quad
     const positionBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-    const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+      const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
 
-    // Set up position attribute
-    const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
-    gl.enableVertexAttribArray(positionAttributeLocation)
-    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
+      // Set up position attribute
+      const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
+      gl.enableVertexAttribArray(positionAttributeLocation)
+      gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
 
-    // Get uniform locations
+      // Get uniform locations
     resolutionUniformLocationRef.current = gl.getUniformLocation(program, "u_resolution")
     timeUniformLocationRef.current = gl.getUniformLocation(program, "u_time")
     audioLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_audioLevel")
@@ -627,21 +637,21 @@ export default function SpaceshipGLSLVisualization() {
         gl.uniform1f(scaleReactivityUniformLocationRef.current, scaleReactivity)
       }
 
-      // Clear canvas and draw
-      gl.clearColor(0, 0, 0, 1)
-      gl.clear(gl.COLOR_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLES, 0, 6)
+        // Clear canvas and draw
+        gl.clearColor(0, 0, 0, 1)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.drawArrays(gl.TRIANGLES, 0, 6)
 
       // Request next frame
       animationRef.current = requestAnimationFrame(render)
-    }
+      }
 
     // Start render loop
-    render()
+      render()
 
-    // Cleanup
+      // Cleanup
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
+        window.removeEventListener("resize", resizeCanvas)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
@@ -1063,7 +1073,18 @@ export default function SpaceshipGLSLVisualization() {
           zIndex: 10,
         }}
       >
+        <a
+          href="https://x.com/YoheiNishitsuji/status/1898687974914904342"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#1DA1F2", textDecoration: "none" }}
+        >
+          @Yohei Nishitsuji
+        </a>
       </div>
     </div>
   )
 }
+
+export default TweetGLSLVisualization
+

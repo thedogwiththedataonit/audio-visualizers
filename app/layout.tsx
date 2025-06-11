@@ -96,6 +96,19 @@ export default function RootLayout({
               >
                 Spectral
               </Link>
+              <Link 
+                href="/commando" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Commando
+              </Link>
+              <Link 
+                href="/elusive" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Elusive
+              </Link>
+
               
             </div>
         {children}

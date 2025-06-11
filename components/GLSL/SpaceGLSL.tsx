@@ -11,7 +11,7 @@ interface AudioData {
   waveformData: Float32Array
 }
 
-export default function SpaceshipGLSLVisualization() {
+export default function SpaceGLSL() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -51,7 +51,7 @@ export default function SpaceshipGLSLVisualization() {
   const [rotationSpeed, setRotationSpeed] = useState(0.5)
   const [colorSensitivity, setColorSensitivity] = useState(0.5)
   const [beatPulse, setBeatPulse] = useState(0.5)
-  const [fractalComplexity, setFractalComplexity] = useState(0.6)
+  const [fractalComplexity, setFractalComplexity] = useState(0.5)
   const [smoothing, setSmoothing] = useState(0.85)
   const [scaleReactivity, setScaleReactivity] = useState(0.5)
 
@@ -72,7 +72,6 @@ export default function SpaceshipGLSLVisualization() {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
 
-      // Resume context if suspended (browser autoplay policy)
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume()
       }
@@ -91,54 +90,37 @@ export default function SpaceshipGLSLVisualization() {
     analyser.getByteFrequencyData(dataArray)
     analyser.getByteTimeDomainData(waveformArray)
 
-    // Calculate frequency bands
     const bassEnd = Math.floor(bufferLength * 0.1)
     const midEnd = Math.floor(bufferLength * 0.5)
 
     let bassSum = 0, midSum = 0, trebleSum = 0, totalSum = 0
 
-    // Bass (0-10% of frequency range)
-    for (let i = 0; i < bassEnd; i++) {
-      bassSum += dataArray[i]
-    }
+    for (let i = 0; i < bassEnd; i++) bassSum += dataArray[i]
     bassSum /= bassEnd
 
-    // Mid (10-50% of frequency range)
-    for (let i = bassEnd; i < midEnd; i++) {
-      midSum += dataArray[i]
-    }
+    for (let i = bassEnd; i < midEnd; i++) midSum += dataArray[i]
     midSum /= (midEnd - bassEnd)
 
-    // Treble (50-100% of frequency range)
-    for (let i = midEnd; i < bufferLength; i++) {
-      trebleSum += dataArray[i]
-    }
+    for (let i = midEnd; i < bufferLength; i++) trebleSum += dataArray[i]
     trebleSum /= (bufferLength - midEnd)
 
-    // Overall level
-    for (let i = 0; i < bufferLength; i++) {
-      totalSum += dataArray[i]
-    }
+    for (let i = 0; i < bufferLength; i++) totalSum += dataArray[i]
     const level = totalSum / bufferLength / 255
 
-    // Normalize frequency bands
     const bassLevel = bassSum / 255
     const midLevel = midSum / 255
     const trebleLevel = trebleSum / 255
 
-    // Downsample frequency data to 64 bins
     for (let i = 0; i < 64; i++) {
       const index = Math.floor((i / 64) * bufferLength)
       frequencyDataRef.current[i] = dataArray[index] / 255
     }
 
-    // Downsample waveform data to 32 bins
     for (let i = 0; i < 32; i++) {
       const index = Math.floor((i / 32) * bufferLength)
       waveformDataRef.current[i] = (waveformArray[index] - 128) / 128
     }
 
-    // Smooth the audio data to prevent jarring transitions
     const smoothingFactor = smoothing
     const current = smoothedAudioDataRef.current
 
@@ -147,7 +129,6 @@ export default function SpaceshipGLSLVisualization() {
     current.midLevel = current.midLevel * smoothingFactor + midLevel * (1 - smoothingFactor)
     current.trebleLevel = current.trebleLevel * smoothingFactor + trebleLevel * (1 - smoothingFactor)
 
-    // Update frequency and waveform arrays
     for (let i = 0; i < 64; i++) {
       current.frequencyData[i] = current.frequencyData[i] * smoothingFactor + frequencyDataRef.current[i] * (1 - smoothingFactor)
     }
@@ -169,7 +150,6 @@ export default function SpaceshipGLSLVisualization() {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(file.name.replace(/\.[^/.]+$/, ""))
@@ -183,7 +163,6 @@ export default function SpaceshipGLSLVisualization() {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -193,7 +172,6 @@ export default function SpaceshipGLSLVisualization() {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -222,7 +200,6 @@ export default function SpaceshipGLSLVisualization() {
     audio.crossOrigin = "anonymous"
     audio.volume = volume
 
-    // Set up audio element event listeners
     audio.addEventListener('loadedmetadata', () => {
       setDuration(audio.duration)
       setTrackName(filename.replace(/\.[^/.]+$/, ""))
@@ -236,7 +213,6 @@ export default function SpaceshipGLSLVisualization() {
       setIsPlaying(false)
     })
 
-    // Clean up previous audio setup
     if (audioElementRef.current) {
       audioElementRef.current.pause()
       if (audioElementRef.current.src.startsWith('blob:')) {
@@ -246,7 +222,6 @@ export default function SpaceshipGLSLVisualization() {
 
     audioElementRef.current = audio
 
-    // Set up Web Audio API
     if (audioContextRef.current) {
       if (sourceRef.current) {
         sourceRef.current.disconnect()
@@ -353,14 +328,12 @@ export default function SpaceshipGLSLVisualization() {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Get WebGL2 context
     const gl = canvas.getContext("webgl2")
     if (!gl) {
       console.error("WebGL2 not supported")
       return
     }
 
-    // Resize canvas to fill window
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
@@ -370,7 +343,6 @@ export default function SpaceshipGLSLVisualization() {
     resizeCanvas()
     window.addEventListener("resize", resizeCanvas)
 
-    // Vertex shader source
     const vertexShaderSource = `#version 300 es
       precision highp float;
       in vec4 a_position;
@@ -379,119 +351,141 @@ export default function SpaceshipGLSLVisualization() {
       }
     `
 
-    // Enhanced fragment shader with audio reactivity
+    // Space-themed fragment shader based on InertiaGLSL structure
     const fragmentShaderSource = `#version 300 es
-  precision highp float;
-  out vec4 outColor;
+precision highp float;
+
+out vec4 outColor;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+// Audio uniforms
+uniform float u_audioLevel;
+uniform float u_bassLevel;
+uniform float u_midLevel;
+uniform float u_trebleLevel;
+uniform float u_frequencyData[64];
+uniform float u_waveformData[32];
+
+// Control uniforms
+uniform float u_intensity;
+uniform float u_rotationSpeed;
+uniform float u_colorSensitivity;
+uniform float u_beatPulse;
+uniform float u_fractalComplexity;
+uniform float u_scaleReactivity;
+
+// 2D rotation matrix function
+mat2 rotate2D(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+  return mat2(c, -s, s, c);
+}
+
+// HSV to RGB color conversion
+vec3 hsv(float h, float s, float v) {
+  vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+  vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
+  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
+}
+
+// Get frequency data for a normalized position (0-1)
+float getFrequency(float pos) {
+  int index = int(pos * 63.0);
+  return u_frequencyData[index];
+}
+
+void main() {
+  vec2 r = u_resolution;
+  vec2 FC = gl_FragCoord.xy;
+  float t = u_time;
+  vec4 o = vec4(0, 0, 0, 1);
   
-  // Standard uniforms
-  uniform vec2 u_resolution;
-  uniform float u_time;
+  // Audio-reactive scaling
+  float audioScale = 1.0 + (u_audioLevel * 0.4 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
   
-     // Audio uniforms
-   uniform float u_audioLevel;
-   uniform float u_bassLevel;
-   uniform float u_midLevel;
-   uniform float u_trebleLevel;
-   uniform float u_frequencyData[64];
-   uniform float u_waveformData[32];
-   
-   // Control uniforms
-   uniform float u_intensity;
-   uniform float u_rotationSpeed;
-   uniform float u_colorSensitivity;
-   uniform float u_beatPulse;
-   uniform float u_fractalComplexity;
-   uniform float u_scaleReactivity;
+  // Dynamic iteration count based on audio intensity and complexity control
+  float maxIterations = 75.0 + u_audioLevel * 15.0 * u_fractalComplexity;
   
-  // HSV to RGB color conversion
-  vec3 hsv(float h, float s, float v) {
-    vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
-    return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
-  }
-  
-  // Get frequency data for a normalized position (0-1)
-  float getFrequency(float pos) {
-    int index = int(pos * 63.0);
-    return u_frequencyData[index];
-  }
-  
-  void main() {
-    vec2 r = u_resolution;
-    vec2 FC = gl_FragCoord.xy;
-    float t = u_time;
-    vec4 o = vec4(0, 0, 0, 1);
+  for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
+    // Audio-reactive 3D transformation with cosmic spiral dynamics
+    vec3 p = vec3((FC.xy*2.-r)/r.x*audioScale, g-.3 + sin(i*0.1)*0.2);
     
-         // Audio-reactive scaling - use audio level instead of static breathing
-     float audioScale = 1.0 + (u_audioLevel * 0.5 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
-     
-     // Dynamic iteration count based on audio intensity
-     float maxIterations = 35.0 + u_audioLevel * 8.0 * u_fractalComplexity;
+    // Dynamic spiral rotation with frequency-reactive modulation
+    float spiralPhase = t * (0.12 + u_bassLevel * 0.4 * u_intensity) * u_rotationSpeed + i * 0.03;
+    float nebulaRotation = t * (0.08 + u_trebleLevel * 0.3 * u_intensity) * u_rotationSpeed * sin(i * 0.05);
     
-    for(float i=0.,g=0.,e=0.,s=0.; i < maxIterations; i++){
-      // Audio-reactive 3D transformation
-      vec3 p = vec3((FC.xy - 0.5 * r) / r.y * 1.5 * audioScale, g - 0.6);
-      
-             // Audio-reactive rotation speed
-       float rotSpeed = t * (0.4 + (u_bassLevel * 0.2 + u_midLevel * 0.1) * u_intensity) * u_rotationSpeed;
-       p.yz *= mat2(cos(rotSpeed), sin(rotSpeed), -sin(rotSpeed), cos(rotSpeed));
-       
-       // Additional rotation on x-axis based on treble
-       float trebleRot = t * u_trebleLevel * 0.4 * u_rotationSpeed * u_intensity;
-       p.xz *= mat2(cos(trebleRot), sin(trebleRot), -sin(trebleRot), cos(trebleRot));
-      
-      s = 1.0;
-      
-             // Audio-reactive folding parameters
-       vec3 foldParams = vec3(3.0 + u_bassLevel * 0.5 * u_intensity, 4.5 + u_midLevel * 0.8 * u_intensity, 1.0 + u_trebleLevel * 0.3 * u_intensity);
-       vec3 foldOffset = vec3(4.0 + u_audioLevel * 0.3 * u_intensity, 2.0 + getFrequency(0.2) * 0.5 * u_intensity, 2.0 + getFrequency(0.8) * 0.5 * u_intensity);
-      
-      for(int i = 0; i++ < 14; p = foldParams - abs(abs(p) * e - foldOffset))
-        s *= e = max(1.01, 8.0 / dot(p, p));
-      
-             // Audio-reactive geometric accumulation
-       g += mod(length(p.zx), p.y) / s * (1.0 + u_audioLevel * 0.15 * u_intensity);
-      
-      s = log(s) / g;
-      
-      // Dynamic color based on frequency spectrum
-      float freqPos = i / maxIterations;
-      float freqIntensity = getFrequency(freqPos);
-      
-             // Multi-layered color mapping
-       float hue1 = 0.6 - p.z * 0.1 + u_bassLevel * 0.1 * u_colorSensitivity;           // Base hue shift
-       float hue2 = 0.8 + u_midLevel * 0.15 * u_colorSensitivity - freqIntensity * 0.1 * u_colorSensitivity;  // Mid-frequency hue
-       float hue3 = 0.2 + u_trebleLevel * 0.2 * u_colorSensitivity;                     // Treble hue
-       
-       // Blend hues based on audio characteristics
-       float hue = mix(mix(hue1, hue2, u_midLevel * 0.5 * u_colorSensitivity), hue3, u_trebleLevel * 0.3 * u_colorSensitivity);
-       
-       // Dynamic saturation and brightness
-       float saturation = 0.7 + u_audioLevel * 0.1 * u_colorSensitivity;
-       float brightness = s / (3500.0 - u_audioLevel * 800.0 * u_intensity) * (1.0 + freqIntensity * 0.3 * u_colorSensitivity);
-       
-       // Beat-reactive brightness pulses
-       float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.5 * u_beatPulse;
-       brightness *= beatPulseEffect;
-      
-      o.rgb += hsv(hue, saturation, brightness);
+    p.xz *= rotate2D(spiralPhase + u_midLevel * 1.2);
+    p.yz *= rotate2D(nebulaRotation * 0.9 + u_audioLevel * 0.5);
+    
+    s = 1.0;
+    
+    // Enhanced cosmic folding with frequency modulation
+    vec3 foldParams = vec3(
+      3.2 + u_bassLevel * 0.9 * u_intensity + sin(t * 0.3) * 0.4,     // Pulsating galactic arms
+      9.2 + u_midLevel * 1.3 * u_intensity + cos(t * 0.2) * 0.6,      // Breathing stellar clusters
+      2.6 + u_trebleLevel * 0.7 * u_intensity + sin(i * 0.1) * 0.3    // Iteration-dependent dust
+    );
+    
+    vec3 foldOffset = vec3(
+      5.2 + u_audioLevel * 0.5 * u_intensity + getFrequency(i/maxIterations) * 0.8,
+      2.1 + getFrequency(0.3) * 0.9 * u_intensity + sin(t * 0.4) * 0.3,
+      3.1 + getFrequency(0.8) * 0.7 * u_intensity + cos(t * 0.5 + i * 0.02) * 0.4
+    ) / max(0.1, audioScale * 0.8);
+    
+    // Modified fractal iteration with cosmic turbulence
+    for(int j=0; j++<18; p = foldParams - abs(abs(p)*e - foldOffset)) {
+      float turbulence = 1.0 + sin(float(j) * 0.4 + t * 0.6) * u_intensity * 0.1;
+      s *= e = max(1.005 + u_audioLevel * 0.003 * u_intensity * turbulence, 
+                   (8.2 + u_bassLevel * 2.1 * u_intensity) / dot(p*0.9, p));
     }
     
-         // Final audio-reactive enhancement
-     o.rgb *= 1.0 + u_audioLevel * 0.15 * u_intensity;
+    // Enhanced geometric accumulation with cosmic interference
+    float cosmicMod = mod(length(p.zx) + sin(t * 0.7 + i * 0.08) * 0.2, p.y + cos(i * 0.06) * 0.1);
+    g += cosmicMod / s * (1.0 + u_audioLevel * 0.22 * u_intensity + getFrequency(i/maxIterations) * 0.15);
     
-    // Add subtle waveform overlay in corners
-    vec2 cornerPos = FC.xy / r;
-    if (cornerPos.x < 0.1 && cornerPos.y > 0.9) {
-      float waveIndex = cornerPos.x * 10.0;
-      int waveIdx = int(waveIndex * 31.0);
-      float waveValue = u_waveformData[waveIdx];
-      o.rgb += vec3(0.1, 0.1, 0.2) * abs(waveValue) * 2.0;
-    }
+    s = log(s + sin(i * 0.05) * 0.1) / max(0.01, g);
     
-    outColor = o;
+    // Space-themed color generation based on frequency spectrum
+    float freqPos = i / maxIterations;
+    float freqIntensity = getFrequency(freqPos);
+    
+    // Multi-layered cosmic hue calculation
+    float nebulHue = -g * 0.08 + u_bassLevel * 0.12 * u_colorSensitivity;        // Deep space blues/purples
+    float stellarHue = 0.65 + u_midLevel * 0.18 * u_colorSensitivity - freqIntensity * 0.12 * u_colorSensitivity; // Star colors
+    float cosmicHue = 0.25 + u_trebleLevel * 0.22 * u_colorSensitivity + t * 0.015; // Cosmic rays
+    
+    // Blend hues for space-like color palette
+    float hue = mix(mix(nebulHue, stellarHue, u_midLevel * 0.55 * u_colorSensitivity), 
+                    cosmicHue, u_trebleLevel * 0.35 * u_colorSensitivity);
+    
+    // Enhanced space-themed saturation and brightness
+    float saturation = 0.65 + u_audioLevel * 0.12 * u_colorSensitivity;
+    float brightness = s / (4000.0 - u_audioLevel * 1100.0 * u_intensity) 
+                      * (1.0 + freqIntensity * 0.35 * u_colorSensitivity);
+    
+    // Stellar pulse effects (beat-reactive)
+    float stellarPulse = 1.0 + u_bassLevel * u_bassLevel * 0.7 * u_beatPulse;
+    brightness *= stellarPulse;
+    
+    // Color accumulation with cosmic enhancement
+    o.rgb += hsv(hue, saturation, brightness);
   }
+  
+  // Final cosmic enhancement
+  o.rgb *= 1.0 + u_audioLevel * 0.18 * u_intensity;
+  
+  // Add subtle starfield overlay in corner
+  vec2 cornerPos = FC.xy / r;
+  if (cornerPos.x < 0.11 && cornerPos.y > 0.89) {
+    float waveIndex = cornerPos.x * 9.09;
+    int waveIdx = int(waveIndex * 31.0);
+    float waveValue = u_waveformData[waveIdx];
+    o.rgb += vec3(0.12, 0.08, 0.22) * abs(waveValue) * 2.2 * u_intensity;
+  }
+  
+  outColor = o;
+}
 `
 
     // Create and compile shaders
@@ -509,7 +503,6 @@ export default function SpaceshipGLSLVisualization() {
         gl.deleteShader(shader)
         return null
       }
-
       return shader
     }
 
@@ -518,7 +511,6 @@ export default function SpaceshipGLSLVisualization() {
 
     if (!vertexShader || !fragmentShader) return
 
-    // Create program and link shaders
     const program = gl.createProgram()
     if (!program) {
       console.error("Failed to create program")
@@ -536,13 +528,12 @@ export default function SpaceshipGLSLVisualization() {
 
     programRef.current = program
 
-    // Set up vertex buffer with a full-screen quad
+    // Set up vertex buffer
     const positionBuffer = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
     const positions = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
 
-    // Set up position attribute
     const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
     gl.enableVertexAttribArray(positionAttributeLocation)
     gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0)
@@ -556,8 +547,6 @@ export default function SpaceshipGLSLVisualization() {
     trebleLevelUniformLocationRef.current = gl.getUniformLocation(program, "u_trebleLevel")
     frequencyDataUniformLocationRef.current = gl.getUniformLocation(program, "u_frequencyData")
     waveformDataUniformLocationRef.current = gl.getUniformLocation(program, "u_waveformData")
-
-    // Get control uniform locations
     intensityUniformLocationRef.current = gl.getUniformLocation(program, "u_intensity")
     rotationSpeedUniformLocationRef.current = gl.getUniformLocation(program, "u_rotationSpeed")
     colorSensitivityUniformLocationRef.current = gl.getUniformLocation(program, "u_colorSensitivity")
@@ -565,89 +554,44 @@ export default function SpaceshipGLSLVisualization() {
     fractalComplexityUniformLocationRef.current = gl.getUniformLocation(program, "u_fractalComplexity")
     scaleReactivityUniformLocationRef.current = gl.getUniformLocation(program, "u_scaleReactivity")
 
-    // Start time for animation
     const startTime = performance.now()
 
-    // Render function
     const render = () => {
       if (!programRef.current || !gl) return
       gl.useProgram(programRef.current)
 
-      // Get current audio data
       const audioData = analyzeAudio()
-
-      // Update time uniform
       const currentTime = (performance.now() - startTime) / 1000
-      if (timeUniformLocationRef.current) {
-        gl.uniform1f(timeUniformLocationRef.current, currentTime)
-      }
 
-      // Update resolution uniform
-      if (resolutionUniformLocationRef.current) {
-        gl.uniform2f(resolutionUniformLocationRef.current, canvas.width, canvas.height)
-      }
+      // Update uniforms
+      if (timeUniformLocationRef.current) gl.uniform1f(timeUniformLocationRef.current, currentTime)
+      if (resolutionUniformLocationRef.current) gl.uniform2f(resolutionUniformLocationRef.current, canvas.width, canvas.height)
+      if (audioLevelUniformLocationRef.current) gl.uniform1f(audioLevelUniformLocationRef.current, audioData.level)
+      if (bassLevelUniformLocationRef.current) gl.uniform1f(bassLevelUniformLocationRef.current, audioData.bassLevel)
+      if (midLevelUniformLocationRef.current) gl.uniform1f(midLevelUniformLocationRef.current, audioData.midLevel)
+      if (trebleLevelUniformLocationRef.current) gl.uniform1f(trebleLevelUniformLocationRef.current, audioData.trebleLevel)
+      if (frequencyDataUniformLocationRef.current) gl.uniform1fv(frequencyDataUniformLocationRef.current, audioData.frequencyData)
+      if (waveformDataUniformLocationRef.current) gl.uniform1fv(waveformDataUniformLocationRef.current, audioData.waveformData)
+      if (intensityUniformLocationRef.current) gl.uniform1f(intensityUniformLocationRef.current, intensity)
+      if (rotationSpeedUniformLocationRef.current) gl.uniform1f(rotationSpeedUniformLocationRef.current, rotationSpeed)
+      if (colorSensitivityUniformLocationRef.current) gl.uniform1f(colorSensitivityUniformLocationRef.current, colorSensitivity)
+      if (beatPulseUniformLocationRef.current) gl.uniform1f(beatPulseUniformLocationRef.current, beatPulse)
+      if (fractalComplexityUniformLocationRef.current) gl.uniform1f(fractalComplexityUniformLocationRef.current, fractalComplexity)
+      if (scaleReactivityUniformLocationRef.current) gl.uniform1f(scaleReactivityUniformLocationRef.current, scaleReactivity)
 
-      // Update audio uniforms
-      if (audioLevelUniformLocationRef.current) {
-        gl.uniform1f(audioLevelUniformLocationRef.current, audioData.level)
-      }
-      if (bassLevelUniformLocationRef.current) {
-        gl.uniform1f(bassLevelUniformLocationRef.current, audioData.bassLevel)
-      }
-      if (midLevelUniformLocationRef.current) {
-        gl.uniform1f(midLevelUniformLocationRef.current, audioData.midLevel)
-      }
-      if (trebleLevelUniformLocationRef.current) {
-        gl.uniform1f(trebleLevelUniformLocationRef.current, audioData.trebleLevel)
-      }
-      if (frequencyDataUniformLocationRef.current) {
-        gl.uniform1fv(frequencyDataUniformLocationRef.current, audioData.frequencyData)
-      }
-      if (waveformDataUniformLocationRef.current) {
-        gl.uniform1fv(waveformDataUniformLocationRef.current, audioData.waveformData)
-      }
-
-      // Update control uniforms
-      if (intensityUniformLocationRef.current) {
-        gl.uniform1f(intensityUniformLocationRef.current, intensity)
-      }
-      if (rotationSpeedUniformLocationRef.current) {
-        gl.uniform1f(rotationSpeedUniformLocationRef.current, rotationSpeed)
-      }
-      if (colorSensitivityUniformLocationRef.current) {
-        gl.uniform1f(colorSensitivityUniformLocationRef.current, colorSensitivity)
-      }
-      if (beatPulseUniformLocationRef.current) {
-        gl.uniform1f(beatPulseUniformLocationRef.current, beatPulse)
-      }
-      if (fractalComplexityUniformLocationRef.current) {
-        gl.uniform1f(fractalComplexityUniformLocationRef.current, fractalComplexity)
-      }
-      if (scaleReactivityUniformLocationRef.current) {
-        gl.uniform1f(scaleReactivityUniformLocationRef.current, scaleReactivity)
-      }
-
-      // Clear canvas and draw
       gl.clearColor(0, 0, 0, 1)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLES, 0, 6)
 
-      // Request next frame
       animationRef.current = requestAnimationFrame(render)
     }
 
-    // Start render loop
     render()
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", resizeCanvas)
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      if (program) {
-        gl.deleteProgram(program)
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      if (program) gl.deleteProgram(program)
       gl.deleteShader(vertexShader)
       gl.deleteShader(fragmentShader)
       gl.deleteBuffer(positionBuffer)
@@ -1049,21 +993,6 @@ export default function SpaceshipGLSLVisualization() {
           Drop audio file here
         </div>
       )}
-
-      {/* Original Attribution */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "10px",
-          right: "10px",
-          color: "white",
-          fontFamily: "sans-serif",
-          fontSize: "12px",
-          padding: "5px",
-          zIndex: 10,
-        }}
-      >
-      </div>
     </div>
   )
-}
+} 
