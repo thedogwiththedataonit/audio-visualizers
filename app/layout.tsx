@@ -108,6 +108,13 @@ export default function RootLayout({
               >
                 Elusive
               </Link>
+              <Link 
+                href="/orchid" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Orchid
+              </Link>
+              
 
               
             </div>
