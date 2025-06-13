@@ -13,19 +13,19 @@ interface AudioData {
 }
 
 /**
- * Audio-Reactive GLSL Visualization Component
+ * Audio-Reactive Galaxy GLSL Visualization Component
  *
- * An enhanced React component that renders a WebGL visualization based on fractal ray marching
+ * An enhanced React component that renders a WebGL galaxy visualization based on ray marching
  * with comprehensive audio reactivity and visual controls.
  *
  * Features:
- * - Audio-reactive fractal rendering with frequency analysis
+ * - Audio-reactive galaxy rendering with frequency analysis
  * - Full audio player with upload, playback controls, and timeline
  * - Real-time visual controls for audio responsiveness
  * - Mouse inertia controls for manual interaction
  * - Support for MP3, WAV, and OGG audio formats
  */
-const TweetGLSLVisualization: React.FC = () => {
+const GalaxyGLSLVisualization: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const programRef = useRef<WebGLProgram | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -398,20 +398,20 @@ const TweetGLSLVisualization: React.FC = () => {
     const vertexShaderSource = `#version 300 es
     precision highp float;
     
-      in vec4 a_position;
+    in vec4 a_position;
     
-      void main() {
-        gl_Position = a_position;
-      }
+    void main() {
+      gl_Position = a_position;
+    }
     `
 
-    // Audio-reactive fragment shader source with the neurons equation
+    // Audio-reactive galaxy fragment shader
     const fragmentShaderSource = `#version 300 es
-      precision highp float;
+precision highp float;
 
-      out vec4 outColor;
-      uniform vec2 u_resolution;
-      uniform float u_time;
+out vec4 outColor;
+uniform vec2 u_resolution;
+uniform float u_time;
 
 // Audio uniforms
 uniform float u_audioLevel;
@@ -429,18 +429,16 @@ uniform float u_beatPulse;
 uniform float u_fractalComplexity;
 uniform float u_scaleReactivity;
 
-// 2D rotation matrix function
-mat2 rotate2D(float angle) {
-  float s = sin(angle);
-  float c = cos(angle);
-  return mat2(c, -s, s, c);
+// HSV to RGB conversion function
+vec3 hsv(float h, float s, float v) {
+  vec4 t = vec4(1., 2./3., 1./3., 3.);
+  vec3 p = abs(fract(vec3(h) + t.xyz) * 6. - vec3(t.w));
+  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0., 1.), s);
 }
 
-// HSV to RGB color conversion
-vec3 hsv(float h, float s, float v) {
-  vec4 t = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-  vec3 p = abs(fract(vec3(h) + t.xyz) * 6.0 - vec3(t.w));
-  return v * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), s);
+// 2D rotation matrix
+mat2 r(float a) {
+  return mat2(cos(a), -sin(a), sin(a), cos(a));
 }
 
 // Get frequency data for a normalized position (0-1)
@@ -450,86 +448,103 @@ float getFrequency(float pos) {
 }
 
 void main() {
-  vec2 r = u_resolution;
-  vec2 FC = gl_FragCoord.xy;
-  float t = u_time;
-  vec4 o = vec4(0, 0, 0, 1);
+  vec2 fc = gl_FragCoord.xy;
+  vec2 res = u_resolution;
+  float p = u_time;
   
-  // Audio-reactive scaling and complexity
-  float audioScale = 1.0 + (u_audioLevel * 0.3 + u_bassLevel * 0.2) * u_scaleReactivity * u_intensity;
-  float maxIterations = 40.0 + u_audioLevel * 8.0 * u_fractalComplexity;
-
-        // Main loop for generating the fractal-like pattern
-  // Updated equation for a different visualization with audio reactivity
-  for(float i,g,e,s; i < maxIterations; i++){
-    // Audio-reactive position calculation
-    vec3 p = vec3((FC.xy-.5*r)/r.y*1.5*(cos(t*.5 + u_bassLevel * 0.2 * u_intensity)*.5+1.5)*audioScale, g-.6);
+  // Audio-reactive scaling
+  float audioScale = 1.0 + (u_audioLevel * 0.4 + u_bassLevel * 0.3) * u_scaleReactivity * u_intensity;
+  
+  // Normalize coordinates with audio scaling
+  vec2 uv = (fc - 0.5 * res) / res.y * audioScale;
+  
+  // Ray direction setup
+  vec3 rd = normalize(vec3(uv, 1.0));
+  vec3 o = vec3(0, 0, p * (2.0 + u_audioLevel * 0.5 * u_intensity)); // Audio-reactive ray origin
+  
+  // Initialize variables for the galaxy equation with audio reactivity
+  vec4 e = vec4(0.005 + u_audioLevel * 0.003 * u_intensity); // Reduced color accumulator for darker output
+  float n = 0.0; // Iteration counter
+  float s = 0.0; // Step size
+  vec4 L = vec4(p * (0.05 + u_midLevel * 0.02 * u_intensity)); // Reduced light parameter
+  
+  // Audio-reactive iteration count
+  float maxIterations = 100.0 + u_audioLevel * 20.0 * u_fractalComplexity;
+  
+  // Main galaxy ray marching loop with audio reactivity
+  // Enhanced version of: for(e*=n;n++<1e2;){vec3q=o*rd;q.z+=p+p;q.xy*=r(p/8.);s=length(q=abs(mod(q+1.,2.)-1.));q=q*8.+p+p;s=abs(s-1.1+sin(p)*.1-sin(q.x)*cos(q.y)*sin(q.z)*.2)+.025;o+=s*.5;e+=.001*(1.+cos(o*.75+L-p+vec4(0,1,2,0)))/s*pow((sin(o*.75+L+p*6.)*.5+.5),3.);}
+  for(e *= n; n++ < maxIterations;) {
+    vec3 q = o * rd;
     
-    // Audio-reactive rotation
-    float rotSpeed = -t*.5 * (1.0 + u_rotationSpeed + u_midLevel * 0.3 * u_intensity);
-    p.xz *= rotate2D(rotSpeed);
+    // Audio-reactive time offset
+    float audioTime = p + u_bassLevel * 0.2 * u_intensity;
+    q.z += audioTime + audioTime;
     
-    s = 1.0;
+    // Audio-reactive rotation speed
+    float rotationSpeed = (audioTime / 8.0) * (1.0 + u_rotationSpeed + u_midLevel * 0.3 * u_intensity);
+    q.xy *= r(rotationSpeed);
     
-    // Audio-reactive fractal parameters
-    vec3 foldParams = vec3(
-      3.3 + u_bassLevel * 0.4 * u_intensity,
-      5.0 + u_midLevel * 0.6 * u_intensity,
-      1.0 + u_trebleLevel * 0.3 * u_intensity
-    );
+    s = length(q = abs(mod(q + 1.0, 2.0) - 1.0));
     
-    vec3 foldOffset = vec3(
-      4.0 + u_audioLevel * 0.2 * u_intensity,
-      1.5 + getFrequency(0.2) * 0.3 * u_intensity,
-      2.0 + getFrequency(0.8) * 0.2 * u_intensity
-    );
+    // Audio-reactive scaling and offset
+    float scaleMultiplier = 8.0 + u_trebleLevel * 2.0 * u_intensity;
+    q = q * scaleMultiplier + audioTime + audioTime + getFrequency(0.5) * 0.5 * u_intensity;
     
-    for(int j;j++<9;p=foldParams-abs(abs(p)*e-foldOffset))
-      s*=e=max(1.03 + u_audioLevel * 0.001 * u_intensity, 
-               (7.0 + u_bassLevel * 1.0 * u_intensity)/dot(p,p));
+    // Audio-reactive distance field with frequency modulation
+    float freqMod = getFrequency(n / maxIterations) * 0.1 * u_intensity;
+    s = abs(s - 1.1 + sin(audioTime) * (0.1 + u_audioLevel * 0.05 * u_intensity) 
+            - sin(q.x) * cos(q.y) * sin(q.z) * (0.2 + freqMod)) + 0.025;
     
-    g+=mod(length(p.zx),p.y)/s * (1.0 + u_audioLevel * 0.1 * u_intensity);
-    s=log(s)/max(0.01, g);
+    o += s * (0.5 + u_audioLevel * 0.1 * u_intensity);
     
-    // Audio-reactive color with frequency-based modulation
-    float freqPos = i / maxIterations;
-    float freqIntensity = getFrequency(freqPos);
-    
-    // Multi-layered hue calculation
-    float hue1 = 0.6 - p.x + u_bassLevel * 0.1 * u_colorSensitivity;
-    float hue2 = 0.3 + u_midLevel * 0.15 * u_colorSensitivity + freqIntensity * 0.1 * u_colorSensitivity;
-    float hue3 = 0.8 + u_trebleLevel * 0.2 * u_colorSensitivity - t * 0.01;
-    
-    // Blend hues based on audio characteristics
-    float hue = mix(mix(hue1, hue2, u_midLevel * 0.5 * u_colorSensitivity), 
-                    hue3, u_trebleLevel * 0.3 * u_colorSensitivity);
-    
-    // Dynamic saturation and brightness
-    float saturation = abs(-e) * (0.8 + u_audioLevel * 0.1 * u_colorSensitivity);
-    float brightness = s / (4e3 - u_audioLevel * 1000.0 * u_intensity) 
-                      * (1.0 + freqIntensity * 0.3 * u_colorSensitivity);
-    
-    // Beat-reactive brightness pulses
-    float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.6 * u_beatPulse;
-    brightness *= beatPulseEffect;
-    
-    // Color accumulation with audio enhancement
-    o.rgb += hsv(hue, saturation, brightness);
+         // Audio-reactive color accumulation with frequency spectrum influence
+     float colorIntensity = 0.0003 * (1.0 + u_audioLevel * 0.15 * u_intensity); // Reduced intensity
+     float freqInfluence = getFrequency(0.3) * 0.1 * u_colorSensitivity; // Reduced frequency influence
+     
+     // Convert vec3 to vec4 for proper vector operations
+     vec4 o4 = vec4(o, 1.0);
+     vec4 freqInfluenceVec = vec4(freqInfluence);
+     
+     vec4 colorContrib = colorIntensity * (1.0 + cos(o4 * 0.75 + L - audioTime + vec4(0, 1, 2, 0) + freqInfluenceVec)) / s 
+                       * pow((sin(o4 * 0.75 + L + audioTime * 6.0) * 0.5 + 0.5), vec4(3.0));
+     
+           // Beat-reactive color enhancement with reduced intensity
+      float beatPulseEffect = 1.0 + u_bassLevel * u_bassLevel * 0.25 * u_beatPulse;
+      e += colorContrib * beatPulseEffect;
   }
   
-  // Final audio-reactive enhancement
-  o.rgb *= 1.0 + u_audioLevel * 0.15 * u_intensity;
+  // Audio-reactive color output with enhanced spectrum mapping
+  vec3 color = vec3(0);
   
-  // Add subtle waveform overlay
-  vec2 cornerPos = FC.xy / r;
+  // Multi-layered HSV color mapping with audio reactivity
+  float hueShift = u_audioLevel * 0.08 * u_colorSensitivity;
+  float saturation = 0.7 + u_midLevel * 0.1 * u_colorSensitivity;
+  
+  // Reduced brightness values to prevent white flashes
+  color += hsv(e.x * 0.1 + p * 0.05 + hueShift, saturation, e.x * (0.8 + u_bassLevel * 0.2 * u_intensity));
+  color += hsv(e.y * 0.1 + p * 0.05 + 0.33 + hueShift, saturation * 0.85, e.y * (0.6 + u_midLevel * 0.15 * u_intensity));
+  color += hsv(e.z * 0.1 + p * 0.05 + 0.66 + hueShift, saturation * 0.75, e.z * (0.5 + u_trebleLevel * 0.2 * u_intensity));
+  
+  // Additional frequency-based color layer with reduced brightness
+  float freqColor = getFrequency(0.7) * u_colorSensitivity * u_intensity * 0.5;
+  color += hsv(freqColor + p * 0.02, 0.5, freqColor * 0.3);
+  
+  // Reduced final audio enhancement
+  color *= 1.0 + u_audioLevel * 0.1 * u_intensity;
+  
+  // Add subtle waveform overlay with reduced brightness
+  vec2 cornerPos = fc / res;
   if (cornerPos.x < 0.12 && cornerPos.y > 0.88) {
     float waveIndex = cornerPos.x * 8.33;
     int waveIdx = int(waveIndex * 31.0);
     float waveValue = u_waveformData[waveIdx];
-    o.rgb += vec3(0.15, 0.1, 0.25) * abs(waveValue) * 2.0 * u_intensity;
+    color += vec3(0.08, 0.06, 0.12) * abs(waveValue) * 1.2 * u_intensity;
   }
   
-  outColor = o;
+  // Clamp the final color to prevent any bright flashes
+  color = clamp(color, vec3(0.0), vec3(0.7));
+  
+  outColor = vec4(color, 1.0);
 }
 `
 
@@ -580,7 +595,7 @@ void main() {
       gl.attachShader(program, fragmentShader)
       gl.linkProgram(program)
 
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         console.error("Program linking error:", gl.getProgramInfoLog(program))
         cleanup = () => {
           window.removeEventListener("resize", resizeCanvas)
@@ -1111,13 +1126,13 @@ void main() {
 
       {/* Attribution */}
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', color: 'white', fontSize: '12px', opacity: 0.7 }}>
-        <a href="https://x.com/YoheiNishitsuji/status/1809108393975820730" target="_blank" rel="noopener noreferrer" style={{ color: 'white' }}>
-          Original shader by @Yohei Nishitsuji
-        </a>
+        <div>Galaxy GLSL Visualization</div>
+        <div style={{ fontSize: '10px', marginTop: '2px' }}>
+          Audio-Reactive Enhanced
+        </div>
       </div>
     </div>
   )
 };
 
-export default TweetGLSLVisualization;
-
+export default GalaxyGLSLVisualization; 

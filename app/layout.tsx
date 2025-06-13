@@ -114,6 +114,19 @@ export default function RootLayout({
               >
                 Orchid
               </Link>
+              <Link 
+                href="/galaxy" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Galaxy
+              </Link>
+              <Link 
+                href="/neuron" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Neuron
+              </Link>
+              
               
 
               
