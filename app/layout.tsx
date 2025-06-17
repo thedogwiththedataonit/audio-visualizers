@@ -126,6 +126,31 @@ export default function RootLayout({
               >
                 Neuron
               </Link>
+              <Link 
+                href="/sphere" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Sphere
+              </Link>
+              <Link 
+                href="/tornado" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Tornado
+              </Link>
+              <Link 
+                href="/starlight" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Starlight
+              </Link>
+              <Link 
+                href="/starnest" 
+                className="hover:text-blue-300 transition-colors duration-200 font-medium"
+              >
+                Star Nest
+              </Link>
+              
               
               
 
